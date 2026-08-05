@@ -1,0 +1,78 @@
+# ─────────────────────────────────────────────
+#  Multi-Agent Power Grid Control — Config
+# ─────────────────────────────────────────────
+
+grid:
+  bus_count: 14           # IEEE 14-bus standard
+  base_mva: 100           # base MVA for per-unit
+  case: "case14"          # pandapower network name
+  freq_nominal: 50.0      # nominal frequency (Hz)
+  volt_nominal: 1.0       # nominal voltage (pu)
+
+physics:
+  inertia_H: 5.0          # generator inertia constant
+  damping_D: 0.05         # damping coefficient
+  dt: 0.1                 # simulation timestep (seconds)
+  episode_length: 2400    # steps per episode (=240 seconds)
+
+training:
+  total_timesteps: 1000000
+  learning_rate: 0.0003
+  batch_size: 64
+  n_steps: 2048
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  seed: 42
+  eval_freq: 50000
+  save_freq: 100000
+  log_dir: "results/logs/"
+  model_dir: "results/models/"
+
+rewards:
+  frequency_weight: 10.0
+  voltage_weight: 5.0
+  cost_weight: 1.0
+  blackout_penalty: 100.0
+  stability_bonus: 1.0
+  safety_violation_penalty: 50.0
+
+safety:
+  freq_min: 49.5          # Hz
+  freq_max: 50.5          # Hz
+  volt_min: 0.95          # pu
+  volt_max: 1.05          # pu
+  line_loading_max: 100.0 # % of thermal limit
+  enforce_hard_clip: true
+
+agents:
+  n_agents: 3
+  actor_hidden: [128, 128]
+  critic_hidden: [256, 256]
+  # Agent 1 - Dispatch
+  dispatch_action_dim: 5    # 5 generators
+  # Agent 2 - Frequency
+  frequency_action_dim: 3   # 3 fast reserves
+  # Agent 3 - Voltage
+  voltage_action_dim: 4     # 4 reactive sources
+
+renewables:
+  solar_peak_mw: 50.0
+  wind_peak_mw: 80.0
+  solar_noise_std: 5.0
+  wind_noise_std: 10.0
+  cloud_event_prob: 0.02   # probability per step
+  wind_stop_prob: 0.01
+
+baselines:
+  droop_coefficient: 0.04  # 4% droop
+  agc_kp: 0.3
+  agc_ki: 0.1
+  opf_interval: 150        # run OPF every N steps
+
+dashboard:
+  port: 8050
+  host: "127.0.0.1"
+  update_interval_ms: 500  # refresh rate
+  dark_theme: true
