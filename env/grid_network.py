@@ -554,6 +554,8 @@ class GridNetwork:
                 "Network must be validated before creating summary."
             )
 
+        losses = self.get_power_losses()
+
         summary = {
             "network": IEEE_CASE,
             "bus_count": len(self.net.bus),
@@ -564,7 +566,8 @@ class GridNetwork:
             "power_flow_converged": self.power_flow_converged,
             "total_generation_mw": self.get_total_generation(),
             "total_load_mw": self.get_total_load(),
-            "losses": self.get_power_losses(),
+            "active_loss_mw": losses["active_loss_mw"],
+            "reactive_loss_mvar": losses["reactive_loss_mvar"],
         }
         logger.info("Network summary generated successfully.")
 
