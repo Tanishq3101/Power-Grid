@@ -148,10 +148,20 @@ check("config.yaml loads with all sections", test_config)
 print("\n── Folder Structure ────────────────────────────────────────")
 
 required_dirs = [
-    "env", "agents", "training", "baselines",
-    "evaluation", "dashboard",
-    "data/load_profiles", "data/renewable_data",
-    "results/plots", "results/models",
+    "config",
+    "env",
+    "agents",
+    "training",
+    "baselines",
+    "evaluation",
+    "dashboard",
+    "utils",
+    "tests",
+    "docs",
+    "data/load_profiles",
+    "data/renewable_data",
+    "results/plots",
+    "results/models",
 ]
 required_files = [
     "config.yaml", "requirements.txt",
@@ -162,7 +172,11 @@ required_files = [
     "baselines/agc_control.py",
     "baselines/opf_baseline.py",
     "evaluation/metrics.py",
+    "tests/test_grid.py",
+    "tests/test_physics.py",
+    "tests/test_environment.py",
 ]
+
 
 def test_structure():
     missing = []
@@ -179,6 +193,41 @@ def test_structure():
 
 check("Project folder structure", test_structure)
 
+# ─── 9. Grid Physics ────────────────────────────────────────────────────────
+
+print("\n── Grid Physics Test ───────────────────────────────────────")
+
+def test_grid_physics():
+    from env.grid_physics import GridPhysics
+
+    physics = GridPhysics()
+
+    state = physics.get_state()
+
+    assert state["frequency"] == 50.0
+
+    print(
+        f"       Initial Frequency : "
+        f"{state['frequency']:.2f} Hz"
+    )
+
+check("GridPhysics initialization", test_grid_physics)
+
+check("import numba", lambda: __import__("numba"))
+
+# ─── 10. Logger Test ─────────────────────────────────────────
+
+print("\n── Logger Test ─────────────────────────────────────────────")
+
+def test_logger():
+    from utils.logger import get_logger
+
+    logger = get_logger("verify")
+
+    logger.info("Logger verification.")
+
+check("Logger initialization", test_logger)
+
 # ─── Summary ─────────────────────────────────────────────────────────────────
 passed = sum(1 for r in results if r[0] == PASS)
 failed = sum(1 for r in results if r[0] == FAIL)
@@ -193,3 +242,4 @@ else:
 print(f"{'─'*60}\n")
 
 sys.exit(0 if failed == 0 else 1)
+

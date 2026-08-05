@@ -152,3 +152,26 @@ DASH_REFRESH_INTERVAL = 1000     # milliseconds
 DEFAULT_FIGURE_DPI = 300
 
 DEFAULT_FIGURE_SIZE = (10, 6)
+
+INERTIA_CONSTANT = 5.0
+DAMPING_COEFFICIENT = 1.0
+TIME_STEP = 1.0
+
+# =============================================================================
+# GRID DYNAMICS
+# =============================================================================
+
+# Swing equation integration method
+INTEGRATION_METHOD = "euler"
+
+# Maximum simulation time (seconds)
+MAX_SIMULATION_TIME = 300.0
+
+# Frequency deviation considered stable (Hz)
+FREQUENCY_STABILITY_THRESHOLD = 0.02
+
+# Power imbalance tolerance (MW)
+POWER_IMBALANCE_THRESHOLD = 0.10
+
+# Recovery coefficient for governor/AGC approximation
+RECOVERY_RATE = 0.20
