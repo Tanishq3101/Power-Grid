@@ -5,4 +5,13 @@
 # Day 5: grid_env.py      (gymnasium wrapper)
 # Day 6: renewable.py     (solar/wind models)
 
-from env.grid_env import PowerGridEnv
+"""
+Environment package.
+
+Modules
+-------
+- grid_network
+- grid_physics
+- grid_env
+- renewable
+"""
