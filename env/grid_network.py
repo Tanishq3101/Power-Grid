@@ -45,6 +45,7 @@ https://labs.ece.uw.edu/pstca/pf14/ieee14cdf.txt
 from __future__ import annotations
 
 import copy
+import numpy as np
 from typing import Dict, Optional
 
 import pandapower as pp
@@ -441,6 +442,90 @@ class GridNetwork:
             )
 
         return self.net.res_line["loading_percent"].copy()
+
+    ###############################################################################
+# BUS VOLTAGES
+###############################################################################
+
+    def get_bus_voltages(self) -> np.ndarray:
+        """
+        Return bus voltage magnitudes.
+
+        Returns
+        -------
+        numpy.ndarray
+            Bus voltage magnitudes (pu).
+        """
+
+        return self.get_voltage_profile().to_numpy()
+    
+    ###############################################################################
+# GENERATOR OUTPUTS
+###############################################################################
+
+    def get_generator_outputs(
+    self,
+) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Return generator active and reactive power outputs.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            Active and reactive generator outputs.
+        """
+
+        if not self.validate_network():
+
+            raise RuntimeError(
+                "Power flow must converge before reading generator outputs."
+            )
+
+        return (
+            self.net.res_gen["p_mw"].to_numpy(),
+            self.net.res_gen["q_mvar"].to_numpy(),
+        )
+        
+        
+###############################################################################
+# LINE LOADINGS
+###############################################################################
+
+    def get_line_loadings(self) -> np.ndarray:
+        """
+        Return transmission line loading percentages.
+
+        Returns
+        -------
+        numpy.ndarray
+            Line loading (%).
+        """
+
+        return self.get_line_loading().to_numpy()
+    
+###############################################################################
+# GENERATOR CONTROL
+###############################################################################
+
+    def set_generator_setpoints(
+    self,
+    generator_setpoints: np.ndarray,
+) -> None:
+        """
+        Apply generator active power setpoints.
+
+        Notes
+        -----
+        Day 4:
+            Placeholder implementation.
+
+        Day 5:
+            Actual generator dispatch will be implemented.
+        """
+        logger.debug(
+    "Generator dispatch placeholder called."
+)
+        return
 
     # =====================================================================
     # TOTAL GENERATION

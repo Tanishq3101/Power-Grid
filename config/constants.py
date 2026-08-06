@@ -175,3 +175,25 @@ POWER_IMBALANCE_THRESHOLD = 0.10
 
 # Recovery coefficient for governor/AGC approximation
 RECOVERY_RATE = 0.20
+
+# =============================================================================
+# GYM ENVIRONMENT
+# =============================================================================
+
+OBSERVATION_DIM = 35
+
+ACTION_DIM = 4
+
+RENDER_FPS = 10
+
+MAX_EPISODE_STEPS = 2400
+
+# =============================================================================
+# FREQUENCY LIMITS
+# =============================================================================
+
+NOMINAL_FREQUENCY = 50.0
+
+MIN_FREQUENCY = 49.0
+
+MAX_FREQUENCY = 51.0

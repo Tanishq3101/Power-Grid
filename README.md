@@ -149,3 +149,19 @@ power_grid_marl/
 - *Safe Reinforcement Learning for Power Grid Control* — IEEE Transactions on Smart Grid
 - *MAPPO: Is Independent Learning Enough?* (Yu et al. 2022)
 - IEEE 14-Bus Test Case — University of Washington Power Systems Test Archive
+
+
+Day 4
+------
+
+✓ Gymnasium Environment
+
+✓ Observation Space
+
+✓ Action Space
+
+✓ Episode Management
+
+✓ GridNetwork Integration
+
+✓ GridPhysics Integration

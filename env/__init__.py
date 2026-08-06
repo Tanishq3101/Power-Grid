@@ -18,8 +18,10 @@ Modules
 
 from env.grid_network import GridNetwork
 from env.grid_physics import GridPhysics
+from env.grid_env import PowerGridEnv
 
 __all__ = [
     "GridNetwork",
     "GridPhysics",
+    "PowerGridEnv",
 ]

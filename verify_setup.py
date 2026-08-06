@@ -228,6 +228,28 @@ def test_logger():
 
 check("Logger initialization", test_logger)
 
+
+# ─── 11. Environment Test ──────────────────────────────────────────────
+
+print("\n── Environment Test ─────────────────────────────────────────")
+
+def test_environment():
+
+    from env.grid_env import PowerGridEnv
+
+    env = PowerGridEnv()
+
+    assert env.validate()
+
+    print(
+        "       PowerGridEnv initialized successfully."
+    )
+
+check(
+    "PowerGridEnv initialization",
+    test_environment,
+)
+
 # ─── Summary ─────────────────────────────────────────────────────────────────
 passed = sum(1 for r in results if r[0] == PASS)
 failed = sum(1 for r in results if r[0] == FAIL)

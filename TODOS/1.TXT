@@ -1,0 +1,58 @@
+File: env/grid_network.py
+
+One thing I noticed while writing this:
+
+Currently step() calls
+
+self.grid.set_generator_setpoints(generator_action)
+
+But generator_action is still normalized [-1,1].
+
+In Day 5, when we introduce generator limits, _decode_action() should convert:
+
+
+
+
+When should we change it?
+
+During a repository refactoring/cleanup phase, not while implementing a new feature.
+
+At that point, we'd do:
+
+File: env/grid_network.py
+
+Add:
+
+###############################################################################
+# Power Flow Status
+###############################################################################
+
+def is_power_flow_converged(self) -> bool:
+    """
+    Return whether the latest AC power flow converged.
+
+    Returns
+    -------
+    bool
+        True if the most recent power flow converged.
+    """
+
+    return self.power_flow_converged
+
+Then in grid_env.py replace:
+
+self.grid.power_flow_converged
+
+with
+
+self.grid.is_power_flow_converged()
+Our Rule Going Forward
+
+We will only refactor existing code if one of these is true:
+
+Required for today's feature.
+Fixes a bug.
+Improves performance significantly.
+Simplifies future development without breaking compatibility.
+
+Otherwise, we don't touch working code.
