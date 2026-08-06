@@ -47,28 +47,25 @@ from __future__ import annotations
 ###############################################################################
 # Standard Library Imports
 ###############################################################################
-
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict  # noqa: UP035
 
 ###############################################################################
 # Project Imports
 ###############################################################################
-
 from config.constants import (
-    NOMINAL_FREQUENCY,
-    MIN_FREQUENCY,
-    MAX_FREQUENCY,
-    INERTIA_CONSTANT,
     DAMPING_COEFFICIENT,
-    TIME_STEP,
-    INTEGRATION_METHOD,
-    MAX_SIMULATION_TIME,
     FREQUENCY_STABILITY_THRESHOLD,
+    INERTIA_CONSTANT,
+    INTEGRATION_METHOD,
+    MAX_FREQUENCY,
+    MAX_SIMULATION_TIME,
+    MIN_FREQUENCY,
+    NOMINAL_FREQUENCY,
     POWER_IMBALANCE_THRESHOLD,
     RECOVERY_RATE,
+    TIME_STEP,
 )
-
 from utils.logger import get_logger
 
 ###############################################################################
