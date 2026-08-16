@@ -1,0 +1,11 @@
+[flake8]
+# Only these codes fail CI — all cosmetic/style codes (E1xx-E7xx line
+# length, whitespace, import order handled by black/isort instead) are
+# ignored here. These four catch actual runtime bugs:
+#   E9  - syntax errors
+#   F63 - invalid comparison/assert usage
+#   F7  - break/continue/return misuse
+#   F82 - undefined name used
+select = E9,F63,F7,F82
+max-line-length = 100
+exclude = .git,__pycache__,results,data,docs,build,dist

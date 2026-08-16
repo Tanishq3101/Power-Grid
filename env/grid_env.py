@@ -80,6 +80,9 @@ from config.constants import (
     NOMINAL_FREQUENCY,
     MIN_FREQUENCY, 
     MAX_FREQUENCY,
+    FREQUENCY_REWARD_WEIGHT,
+    VOLTAGE_REWARD_WEIGHT,
+    STABILITY_BONUS,
 )
 
 from env.grid_network import GridNetwork
@@ -538,7 +541,7 @@ class PowerGridEnv(gym.Env):
         # Frequency Penalty
         # ------------------------------------------------------------------
 
-        reward = -frequency_deviation
+        reward = -FREQUENCY_REWARD_WEIGHT * frequency_deviation
 
         # ------------------------------------------------------------------
         # Voltage Violations
@@ -549,7 +552,7 @@ class PowerGridEnv(gym.Env):
             (voltages > 1.05)
         )
 
-        reward -= float(voltage_violations)
+        reward -= VOLTAGE_REWARD_WEIGHT * float(voltage_violations)
 
         # ------------------------------------------------------------------
         # Line Overloads
@@ -567,7 +570,7 @@ class PowerGridEnv(gym.Env):
 
         if physics_state["stable"]:
 
-            reward += 5.0
+            reward += STABILITY_BONUS
 
         return float(reward)
     

@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  format-check:
+    name: Formatting (black + isort)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # black + isort both read their settings from pyproject.toml
+      # (line-length, target-version, profile) — no need to repeat flags here.
+      - name: Check black formatting
+        run: black --check --diff .
+
+      - name: Check import order (isort)
+        run: isort --check-only --diff .
+
+  lint-real-bugs:
+    name: Lint (real bugs only, no cosmetics)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Only fail on actual bugs, not style nitpicks:
+      # E9  - runtime syntax errors
+      # F63 - invalid comparisons (e.g. `is` with a literal)
+      # F7  - break/continue/return outside loop/function, etc.
+      # F82 - undefined name (real bug: using a variable that doesn't exist)
+      - name: Run flake8 (error-only selection)
+        run: flake8 . --select=E9,F63,F7,F82 --show-source --statistics
+
+  type-check:
+    name: Type check (mypy, non-strict)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ignore_missing_imports / no_strict_optional / python_version 3.10
+      # all come from pyproject.toml — catches real type mismatches / bugs,
+      # not missing stubs or cosmetic annotation gaps.
+      - name: Run mypy (lenient)
+        run: mypy . --no-error-summary || mypy .
+
+  tests:
+    name: "Tests — Day ${{ matrix.day }} (${{ matrix.file }})"
+    runs-on: ubuntu-latest
+    needs: [format-check, lint-real-bugs]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - file: tests/test_grid.py
+            day: "2"
+          - file: tests/test_physics.py
+            day: "3"
+          - file: tests/test_environment.py
+            day: "4"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run ${{ matrix.file }}
+        run: pytest ${{ matrix.file }} --cov=. --cov-report=term-missing
+
+  tests-collected-check:
+    name: Fail if no tests were collected
+    runs-on: ubuntu-latest
+    needs: [tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check test collection count
+        run: |
+          COUNT=$(pytest tests/ --collect-only -q | tail -n 1 | grep -o '^[0-9]*' || echo 0)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No tests found in tests/. Every change must ship with a passing test."
+            exit 1
+          fi

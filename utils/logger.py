@@ -1,96 +1,95 @@
 """
 ===============================================================================
 Project : Multi-Agent Reinforcement Learning for Smart Power Grid Control
-File    : logger.py
-Author  : Tanishq Vijay
-Created : Day 2
+File    : utils/logger.py
 
 Description
 -----------
-Provides a centralized logging utility for the project.
+Centralized logging configuration for the project.
 
-Instead of using print() statements throughout the codebase,
-every module should use the project logger.
+Every module calls:
 
-Features
---------
-• Console logging
-• File logging
-• Automatic log directory creation
-• Timestamped messages
-• Configurable log level
+    from utils.logger import get_logger
+    logger = get_logger(__name__)
 
-Example
--------
-from utils.logger import get_logger
+instead of configuring its own logger. This keeps log formatting
+consistent across env/, config/, agents/, baselines/, evaluation/,
+and training/.
 
-logger = get_logger(__name__)
-
-logger.info("Power flow converged successfully.")
-logger.warning("Voltage limit exceeded.")
-logger.error("Power flow failed.")
-
+Logs are written to both the console and a rotating file under
+LOG_DIRECTORY (see config/constants.py).
 ===============================================================================
 """
 
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 
-from config.constants import LOG_DIRECTORY
+# -----------------------------------------------------------------------------
+# Log directory (kept local to avoid a circular import with config.constants)
+# -----------------------------------------------------------------------------
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_LOG_DIRECTORY = _PROJECT_ROOT / "logs"
+_LOG_DIRECTORY.mkdir(parents=True, exist_ok=True)
+
+_LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+_DEFAULT_LEVEL = logging.INFO
+
+_configured_loggers: dict[str, logging.Logger] = {}
 
 
-def get_logger(name: str) -> logging.Logger:
+def get_logger(name: str, level: int = _DEFAULT_LEVEL) -> logging.Logger:
     """
-    Create and return a configured logger.
+    Return a configured logger for the given module name.
 
     Parameters
     ----------
     name : str
-        Usually pass __name__ from the calling module.
+        Usually ``__name__`` of the calling module.
+
+    level : int, optional
+        Logging level (default: logging.INFO).
 
     Returns
     -------
     logging.Logger
-        Configured logger instance.
+        A logger writing to both console and a shared log file.
+
+    Notes
+    -----
+    Safe to call multiple times with the same name — handlers are
+    only attached once per logger to avoid duplicate log lines.
     """
 
-    # Create logs directory if it doesn't exist
-    Path(LOG_DIRECTORY).mkdir(parents=True, exist_ok=True)
+    if name in _configured_loggers:
+        return _configured_loggers[name]
 
     logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.propagate = False
 
-    # Avoid duplicate handlers
-    if logger.handlers:
-        return logger
+    formatter = logging.Formatter(_LOG_FORMAT, datefmt=_DATE_FORMAT)
 
-    logger.setLevel(logging.INFO)
-
-    formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    # -------------------------------------------------------------------------
-    # Console Handler
-    # -------------------------------------------------------------------------
-
-    console_handler = logging.StreamHandler()
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(level)
     console_handler.setFormatter(formatter)
-
-    # -------------------------------------------------------------------------
-    # File Handler
-    # -------------------------------------------------------------------------
-
-    log_file = Path(LOG_DIRECTORY) / "power_grid.log"
-
-    file_handler = logging.FileHandler(log_file, encoding="utf-8")
-    file_handler.setFormatter(formatter)
-
     logger.addHandler(console_handler)
+
+    # File handler (shared log file for the whole project)
+    file_handler = logging.FileHandler(
+        _LOG_DIRECTORY / "power_grid_marl.log",
+        encoding="utf-8",
+    )
+    file_handler.setLevel(level)
+    file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
-    logger.propagate = False
+    _configured_loggers[name] = logger
 
     return logger

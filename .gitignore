@@ -79,6 +79,16 @@ results/plots/*
 !results/plots/.gitkeep
 
 # =============================================================================
+# Downloaded / Generated Data
+# (Day 6: NREL load profiles + solar/wind renewable data — large, re-fetchable)
+# =============================================================================
+data/load_profiles/*
+!data/load_profiles/.gitkeep
+
+data/renewable_data/*
+!data/renewable_data/.gitkeep
+
+# =============================================================================
 # Experiment Outputs
 # =============================================================================
 *.npy

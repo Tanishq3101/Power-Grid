@@ -3,177 +3,143 @@
 Project : Multi-Agent Reinforcement Learning for Smart Power Grid Control
 File    : test_physics.py
 Author  : Tanishq Vijay
-Created : Day 3
+Created : Day 3 | Converted to pytest on Day 4
 ===============================================================================
 
 Description
 -----------
-Unit tests for the GridPhysics engine.
+Pytest unit tests for the GridPhysics engine.
 
-This test verifies:
-
-✓ Initialization
-✓ Reset
-✓ Swing Equation
-✓ Euler Integration
-✓ Generator Trip
-✓ Load Change
-✓ Renewable Fluctuation
-✓ Stability Detection
-✓ State Export
+Run
+---
+pytest tests/test_physics.py -v
 
 ===============================================================================
 """
+
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-# --------------------------------------------------------------------------
-# Add project root to Python path
-# --------------------------------------------------------------------------
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+import pytest
 
 from env.grid_physics import GridPhysics
+from config.constants import NOMINAL_FREQUENCY
 
 
 ###############################################################################
-# Test Runner
+# Fixture
 ###############################################################################
 
-def main():
+@pytest.fixture
+def physics() -> GridPhysics:
+    """Fresh GridPhysics instance for each test (isolated state)."""
+    return GridPhysics()
 
-    print("\n" + "=" * 70)
-    print("GRID PHYSICS VALIDATION")
-    print("=" * 70)
 
-    physics = GridPhysics()
+###############################################################################
+# Initial State
+###############################################################################
 
-    ###########################################################################
-    # Initial State
-    ###########################################################################
-
-    print("\n[1] Initial State")
-
+def test_initial_state(physics: GridPhysics) -> None:
+    """A freshly constructed engine should start at nominal frequency."""
     state = physics.get_state()
 
-    print(f"Frequency        : {state['frequency']:.4f} Hz")
-    print(f"Deviation        : {state['frequency_deviation']:.4f} Hz")
-    print(f"Stable           : {state['stable']}")
+    assert state["frequency"] == pytest.approx(NOMINAL_FREQUENCY)
+    assert state["frequency_deviation"] == pytest.approx(0.0)
+    assert state["stable"] is True
 
-    ###########################################################################
-    # Generator Trip
-    ###########################################################################
 
-    print("\n[2] Generator Trip (-15 MW)")
+###############################################################################
+# Generator Trip
+###############################################################################
 
+def test_generator_trip_drops_frequency(physics: GridPhysics) -> None:
+    """A generator trip (loss of generation) should push frequency down."""
     physics.apply_generator_trip(15)
 
-    for step in range(5):
-
+    for _ in range(5):
         state = physics.step()
 
-        print(
-            f"Step {step+1:02d}"
-            f" | Frequency = {state['frequency']:.4f} Hz"
-        )
+    assert state["frequency"] < NOMINAL_FREQUENCY
+    assert state["stable"] is False
 
-    ###########################################################################
-    # Reset
-    ###########################################################################
 
-    print("\n[3] Reset")
+###############################################################################
+# Reset
+###############################################################################
+
+def test_reset_restores_nominal_frequency(physics: GridPhysics) -> None:
+    """After a disturbance, reset() should return to nominal frequency."""
+    physics.apply_generator_trip(15)
+
+    for _ in range(5):
+        physics.step()
 
     physics.reset()
 
-    print(
-        f"Frequency = {physics.get_frequency():.4f} Hz"
-    )
+    assert physics.get_frequency() == pytest.approx(NOMINAL_FREQUENCY)
+    assert physics.get_frequency_deviation() == pytest.approx(0.0)
 
-    ###########################################################################
-    # Load Increase
-    ###########################################################################
 
-    print("\n[4] Load Increase (+10 MW)")
+###############################################################################
+# Load Increase
+###############################################################################
 
+def test_load_increase_drops_frequency(physics: GridPhysics) -> None:
+    """An increase in load (without matching generation) drops frequency."""
     physics.apply_load_change(10)
 
-    for step in range(5):
-
+    for _ in range(5):
         state = physics.step()
 
-        print(
-            f"Step {step+1:02d}"
-            f" | Frequency = {state['frequency']:.4f} Hz"
-        )
+    assert state["frequency"] < NOMINAL_FREQUENCY
 
-    ###########################################################################
-    # Renewable Increase
-    ###########################################################################
 
-    print("\n[5] Renewable Increase (+8 MW)")
+###############################################################################
+# Renewable Fluctuation
+###############################################################################
+
+def test_renewable_increase_raises_frequency(physics: GridPhysics) -> None:
+    """A renewable generation increase should push frequency back up."""
+    physics.apply_load_change(10)
+
+    for _ in range(5):
+        physics.step()
+
+    freq_before = physics.get_frequency()
 
     physics.apply_renewable_fluctuation(8)
 
-    for step in range(5):
-
+    for _ in range(5):
         state = physics.step()
 
-        print(
-            f"Step {step+1:02d}"
-            f" | Frequency = {state['frequency']:.4f} Hz"
-        )
+    assert state["frequency"] > freq_before
 
-    ###########################################################################
-    # Recovery
-    ###########################################################################
 
-    print("\n[6] Automatic Recovery")
+###############################################################################
+# Automatic Recovery
+###############################################################################
 
-    for step in range(10):
+def test_recovery_reduces_power_imbalance(physics: GridPhysics) -> None:
+    """Repeated restore_nominal_operation() calls should shrink the
+    magnitude of the power imbalance over time."""
+    physics.apply_load_change(10)
+    physics.step()
 
+    imbalance_before = abs(physics.get_power_imbalance())
+
+    for _ in range(10):
         physics.restore_nominal_operation()
+        physics.step()
 
-        state = physics.step()
+    imbalance_after = abs(physics.get_power_imbalance())
 
-        print(
-            f"Step {step+1:02d}"
-            f" | Frequency = {state['frequency']:.4f} Hz"
-        )
-
-    ###########################################################################
-    # Final State
-    ###########################################################################
-
-    print("\n[7] Final State")
-
-    state = physics.get_state()
-
-    for key, value in state.items():
-
-        print(f"{key:22}: {value}")
-
-    ###########################################################################
-    # Validation
-    ###########################################################################
-
-    print("\n[8] Validation")
-
-    print("Physics Valid :", physics.validate())
-
-    print("\n" + "=" * 70)
-    print("ALL PHYSICS TESTS PASSED")
-    print("=" * 70)
+    assert imbalance_after < imbalance_before
 
 
 ###############################################################################
-# Entry Point
+# Validation
 ###############################################################################
 
-if __name__ == "__main__":
-
-    main()
+def test_validate_returns_true_for_healthy_engine(physics: GridPhysics) -> None:
+    """A properly constructed engine should always validate as True."""
+    assert physics.validate() is True

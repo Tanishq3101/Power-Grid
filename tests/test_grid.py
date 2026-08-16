@@ -3,193 +3,141 @@
 Project : Multi-Agent Reinforcement Learning for Smart Power Grid Control
 File    : test_grid.py
 Author  : Tanishq Vijay
-Created : Day 2
+Created : Day 2 | Converted to pytest on Day 4
+===============================================================================
 
 Description
 -----------
-This module validates the IEEE 14-Bus GridNetwork implementation.
-
-It verifies that:
-
-1. IEEE network loads correctly
-2. AC power flow converges
-3. Bus information is available
-4. Generator information is available
-5. Load information is available
-6. Line information is available
-7. Voltage profile is computed
-8. Line loading is computed
-9. Total generation is computed
-10. Total load is computed
-11. Network losses are computed
-12. Network summary is generated
+Pytest unit tests for the IEEE 14-Bus GridNetwork implementation.
 
 Run
 ---
-python tests/test_grid.py
+pytest tests/test_grid.py -v
 
 ===============================================================================
 """
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-# --------------------------------------------------------------------------
-# Add project root to Python path
-# --------------------------------------------------------------------------
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+import pytest
 
 from env.grid_network import GridNetwork
 
 
-def print_header(title: str) -> None:
-    """Print a formatted section header."""
+###############################################################################
+# Fixture
+###############################################################################
 
-    print("\n" + "=" * 70)
-    print(title)
-    print("=" * 70)
+@pytest.fixture
+def grid() -> GridNetwork:
+    """A loaded, power-flow-solved GridNetwork for each test."""
+    network = GridNetwork()
+    network.load_network()
+    network.run_power_flow()
+    return network
 
 
-def run_tests() -> None:
-    """
-    Execute all Day 2 validation tests.
-    """
+###############################################################################
+# Network Loading + Power Flow
+###############################################################################
 
-    print_header("IEEE 14-BUS GRID VALIDATION")
+def test_network_loads(grid: GridNetwork) -> None:
+    assert grid.is_loaded is True
 
-    grid = GridNetwork()
 
-    # ----------------------------------------------------------------------
-    # Load Network
-    # ----------------------------------------------------------------------
+def test_power_flow_converges(grid: GridNetwork) -> None:
+    assert grid.power_flow_converged is True
 
-    print("\n[1] Loading IEEE 14-Bus Network...")
 
-    grid.load_network()
+###############################################################################
+# Bus / Generator / Load / Line Data
+###############################################################################
 
-    print("✓ Network Loaded")
+def test_bus_count(grid: GridNetwork) -> None:
+    assert len(grid.get_bus_data()) == 14
 
-    # ----------------------------------------------------------------------
-    # Power Flow
-    # ----------------------------------------------------------------------
 
-    print("\n[2] Running AC Power Flow...")
+def test_generator_data_available(grid: GridNetwork) -> None:
+    assert len(grid.get_generator_data()) > 0
 
-    if grid.run_power_flow():
 
-        print("✓ Power Flow Converged")
+def test_load_data_available(grid: GridNetwork) -> None:
+    assert len(grid.get_load_data()) > 0
 
-    else:
 
-        raise RuntimeError("Power flow failed.")
+def test_line_data_available(grid: GridNetwork) -> None:
+    assert len(grid.get_line_data()) > 0
 
-    # ----------------------------------------------------------------------
-    # Bus Information
-    # ----------------------------------------------------------------------
 
-    bus = grid.get_bus_data()
+###############################################################################
+# Voltage Profile
+###############################################################################
 
-    print(f"\n✓ Bus Count        : {len(bus)}")
-
-    # ----------------------------------------------------------------------
-    # Generator Information
-    # ----------------------------------------------------------------------
-
-    gen = grid.get_generator_data()
-
-    print(f"✓ Generator Count  : {len(gen)}")
-
-    # ----------------------------------------------------------------------
-    # Load Information
-    # ----------------------------------------------------------------------
-
-    load = grid.get_load_data()
-
-    print(f"✓ Load Count       : {len(load)}")
-
-    # ----------------------------------------------------------------------
-    # Line Information
-    # ----------------------------------------------------------------------
-
-    line = grid.get_line_data()
-
-    print(f"✓ Line Count       : {len(line)}")
-
-    # ----------------------------------------------------------------------
-    # Voltage Profile
-    # ----------------------------------------------------------------------
-
+def test_voltage_profile_within_reasonable_range(grid: GridNetwork) -> None:
     voltages = grid.get_voltage_profile()
 
-    print(
-        f"\n✓ Voltage Range    : "
-        f"{voltages.min():.4f} pu  →  {voltages.max():.4f} pu"
-    )
+    assert voltages.min() > 0.8
+    assert voltages.max() < 1.2
 
-    # ----------------------------------------------------------------------
-    # Line Loading
-    # ----------------------------------------------------------------------
 
+###############################################################################
+# Line Loading
+###############################################################################
+
+def test_line_loading_non_negative(grid: GridNetwork) -> None:
     loading = grid.get_line_loading()
 
-    print(
-        f"✓ Max Line Loading : "
-        f"{loading.max():.2f}%"
-    )
+    assert (loading >= 0).all()
 
-    # ----------------------------------------------------------------------
-    # Generation
-    # ----------------------------------------------------------------------
 
-    generation = grid.get_total_generation()
+###############################################################################
+# Generation / Load Totals
+###############################################################################
 
-    print(f"✓ Generation       : {generation:.3f} MW")
+def test_total_generation_positive(grid: GridNetwork) -> None:
+    assert grid.get_total_generation() > 0
 
-    # ----------------------------------------------------------------------
-    # Load
-    # ----------------------------------------------------------------------
 
-    total_load = grid.get_total_load()
+def test_total_load_positive(grid: GridNetwork) -> None:
+    assert grid.get_total_load() > 0
 
-    print(f"✓ Total Load       : {total_load:.3f} MW")
 
-    # ----------------------------------------------------------------------
-    # Losses
-    # ----------------------------------------------------------------------
+###############################################################################
+# Power Losses
+###############################################################################
 
+def test_power_losses_non_negative(grid: GridNetwork) -> None:
     losses = grid.get_power_losses()
 
-    print(
-        f"✓ Active Loss      : "
-        f"{losses['active_loss_mw']:.3f} MW"
-    )
+    assert losses["active_loss_mw"] >= 0
+    assert losses["reactive_loss_mvar"] >= 0
 
-    print(
-        f"✓ Reactive Loss    : "
-        f"{losses['reactive_loss_mvar']:.3f} MVAr"
-    )
 
-    # ----------------------------------------------------------------------
-    # Summary
-    # ----------------------------------------------------------------------
+###############################################################################
+# Network Summary
+###############################################################################
 
+def test_network_summary_has_expected_keys(grid: GridNetwork) -> None:
     summary = grid.network_summary()
 
-    print("\nNetwork Summary")
+    expected_keys = {
+        "network",
+        "bus_count",
+        "generator_count",
+        "external_grid_count",
+        "load_count",
+        "line_count",
+        "power_flow_converged",
+        "total_generation_mw",
+        "total_load_mw",
+        "active_loss_mw",
+        "reactive_loss_mvar",
+    }
 
-    for key, value in summary.items():
-
-        print(f"{key:25}: {value}")
-
-    print_header("ALL TESTS PASSED")
+    assert expected_keys.issubset(summary.keys())
 
 
-if __name__ == "__main__":
+def test_network_summary_bus_count_matches(grid: GridNetwork) -> None:
+    summary = grid.network_summary()
 
-    run_tests()
+    assert summary["bus_count"] == 14

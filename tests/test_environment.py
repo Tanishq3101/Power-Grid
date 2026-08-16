@@ -3,206 +3,122 @@
 Project : Multi-Agent Reinforcement Learning for Smart Power Grid Control
 File    : test_environment.py
 Author  : Tanishq Vijay
-Created : Day 4
+Created : Day 4 | Converted to pytest on Day 4
 ===============================================================================
 
 Description
 -----------
-This module validates the PowerGridEnv implementation.
-
-It verifies:
-
-1. Environment initialization
-2. Environment validation
-3. Reset functionality
-4. Observation dimensions
-5. Action dimensions
-6. Step execution
-7. Reward generation
-8. Episode termination flags
-9. Render
-10. Close
+Pytest unit tests for the PowerGridEnv implementation.
 
 Run
 ---
-python tests/test_environment.py
+pytest tests/test_environment.py -v
 
 ===============================================================================
 """
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-# --------------------------------------------------------------------------
-# Add project root to Python path
-# --------------------------------------------------------------------------
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-sys.path.append(str(PROJECT_ROOT))
+import pytest
 
 from env.grid_env import PowerGridEnv
+from config.constants import OBSERVATION_DIM, ACTION_DIM
 
 
 ###############################################################################
-# Utilities
+# Fixture
 ###############################################################################
 
-def print_header(title: str) -> None:
-    """Print a formatted section header."""
-
-    print("\n" + "=" * 70)
-    print(title)
-    print("=" * 70)
+@pytest.fixture
+def env() -> PowerGridEnv:
+    """Fresh PowerGridEnv instance for each test."""
+    environment = PowerGridEnv()
+    yield environment
+    environment.close()
 
 
 ###############################################################################
-# Test Runner
+# Construction + Validation
 ###############################################################################
 
-def run_tests() -> None:
+def test_environment_creates(env: PowerGridEnv) -> None:
+    assert env is not None
 
-    print_header("POWER GRID ENVIRONMENT VALIDATION")
 
-    ###########################################################################
-    # Create Environment
-    ###########################################################################
+def test_environment_validates(env: PowerGridEnv) -> None:
+    assert env.validate() is True
 
-    print("\n[1] Creating Environment...")
 
-    env = PowerGridEnv()
+###############################################################################
+# Reset
+###############################################################################
 
-    print("✓ Environment Created")
-
-    ###########################################################################
-    # Validate Environment
-    ###########################################################################
-
-    print("\n[2] Validating Environment...")
-
-    if env.validate():
-
-        print("✓ Environment Valid")
-
-    else:
-
-        raise RuntimeError(
-            "Environment validation failed."
-        )
-
-    ###########################################################################
-    # Reset
-    ###########################################################################
-
-    print("\n[3] Resetting Environment...")
-
+def test_reset_returns_observation_and_info(env: PowerGridEnv) -> None:
     observation, info = env.reset()
 
-    print("✓ Reset Successful")
+    assert observation.shape == (OBSERVATION_DIM,)
+    assert isinstance(info, dict)
 
-    ###########################################################################
-    # Observation Space
-    ###########################################################################
 
-    print("\n[4] Observation Space")
+def test_reset_observation_within_space(env: PowerGridEnv) -> None:
+    observation, _ = env.reset()
 
-    print(
-        f"✓ Observation Shape : "
-        f"{observation.shape}"
-    )
+    assert env.observation_space.contains(observation.astype("float32"))
 
-    assert env.observation_space.contains(
-        observation.astype("float32")
-    )
 
-    print(
-        "✓ Observation within Gymnasium space"
-    )
+###############################################################################
+# Action Space
+###############################################################################
 
-    ###########################################################################
-    # Action Space
-    ###########################################################################
-
-    print("\n[5] Action Space")
-
+def test_action_space_shape(env: PowerGridEnv) -> None:
     action = env.action_space.sample()
 
-    print(
-        f"✓ Action Shape      : "
-        f"{action.shape}"
-    )
-
-    ###########################################################################
-    # Environment Step
-    ###########################################################################
-
-    print("\n[6] Executing One Step...")
-
-    (
-        observation,
-        reward,
-        terminated,
-        truncated,
-        info,
-    ) = env.step(action)
-
-    print(
-        f"✓ Reward            : {reward:.4f}"
-    )
-
-    print(
-        f"✓ Terminated        : {terminated}"
-    )
-
-    print(
-        f"✓ Truncated         : {truncated}"
-    )
-
-    ###########################################################################
-    # Render
-    ###########################################################################
-
-    print("\n[7] Render")
-
-    env.render()
-
-    print("✓ Render Successful")
-
-    ###########################################################################
-    # String Representation
-    ###########################################################################
-
-    print("\n[8] Environment Summary")
-
-    print(env)
-
-    ###########################################################################
-    # Close
-    ###########################################################################
-
-    print("\n[9] Close Environment")
-
-    env.close()
-
-    print("✓ Closed Successfully")
-
-    ###########################################################################
-    # Finished
-    ###########################################################################
-
-    print("\n" + "=" * 70)
-
-    print("ALL ENVIRONMENT TESTS PASSED")
-
-    print("=" * 70)
+    assert action.shape == (ACTION_DIM,)
 
 
 ###############################################################################
-# Entry Point
+# Step
 ###############################################################################
 
-if __name__ == "__main__":
+def test_step_returns_five_values(env: PowerGridEnv) -> None:
+    env.reset()
+    action = env.action_space.sample()
 
-    run_tests()
+    result = env.step(action)
+
+    assert len(result) == 5
+
+    observation, reward, terminated, truncated, info = result
+
+    assert observation.shape == (OBSERVATION_DIM,)
+    assert isinstance(reward, float)
+    assert isinstance(terminated, bool)
+    assert isinstance(truncated, bool)
+    assert isinstance(info, dict)
+
+
+def test_step_raises_if_called_before_reset_when_done() -> None:
+    """step() should refuse to run once the episode has ended."""
+    environment = PowerGridEnv()
+    environment.reset()
+    environment.done = True
+
+    with pytest.raises(RuntimeError):
+        environment.step(environment.action_space.sample())
+
+    environment.close()
+
+
+###############################################################################
+# Render / Close / Repr
+###############################################################################
+
+def test_render_does_not_raise(env: PowerGridEnv) -> None:
+    env.reset()
+    env.render()  # should not raise
+
+
+def test_str_representation(env: PowerGridEnv) -> None:
+    env.reset()
+
+    assert "PowerGridEnv" in str(env)
