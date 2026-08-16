@@ -19,6 +19,8 @@ pytest tests/test_environment.py -v
 
 from __future__ import annotations
 
+from typing import Generator
+
 import pytest
 
 from env.grid_env import PowerGridEnv
@@ -29,8 +31,9 @@ from config.constants import OBSERVATION_DIM, ACTION_DIM
 # Fixture
 ###############################################################################
 
+
 @pytest.fixture
-def env() -> PowerGridEnv:
+def env() -> Generator[PowerGridEnv, None, None]:
     """Fresh PowerGridEnv instance for each test."""
     environment = PowerGridEnv()
     yield environment
@@ -40,6 +43,7 @@ def env() -> PowerGridEnv:
 ###############################################################################
 # Construction + Validation
 ###############################################################################
+
 
 def test_environment_creates(env: PowerGridEnv) -> None:
     assert env is not None
@@ -52,6 +56,7 @@ def test_environment_validates(env: PowerGridEnv) -> None:
 ###############################################################################
 # Reset
 ###############################################################################
+
 
 def test_reset_returns_observation_and_info(env: PowerGridEnv) -> None:
     observation, info = env.reset()
@@ -70,6 +75,7 @@ def test_reset_observation_within_space(env: PowerGridEnv) -> None:
 # Action Space
 ###############################################################################
 
+
 def test_action_space_shape(env: PowerGridEnv) -> None:
     action = env.action_space.sample()
 
@@ -79,6 +85,7 @@ def test_action_space_shape(env: PowerGridEnv) -> None:
 ###############################################################################
 # Step
 ###############################################################################
+
 
 def test_step_returns_five_values(env: PowerGridEnv) -> None:
     env.reset()
@@ -112,6 +119,7 @@ def test_step_raises_if_called_before_reset_when_done() -> None:
 ###############################################################################
 # Render / Close / Repr
 ###############################################################################
+
 
 def test_render_does_not_raise(env: PowerGridEnv) -> None:
     env.reset()

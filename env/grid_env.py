@@ -57,7 +57,7 @@ from __future__ import annotations
 # Standard Library Imports
 # =============================================================================
 
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 # =============================================================================
 # Third-Party Imports
@@ -78,7 +78,7 @@ from config.constants import (
     RENDER_FPS,
     MAX_EPISODE_STEPS,
     NOMINAL_FREQUENCY,
-    MIN_FREQUENCY, 
+    MIN_FREQUENCY,
     MAX_FREQUENCY,
     FREQUENCY_REWARD_WEIGHT,
     VOLTAGE_REWARD_WEIGHT,
@@ -276,6 +276,7 @@ class PowerGridEnv(gym.Env):
 
         return observation, info
         ###########################################################################
+
     # Environment Step
     ###########################################################################
 
@@ -318,9 +319,7 @@ class PowerGridEnv(gym.Env):
 
         if self.done:
 
-            raise RuntimeError(
-                "Episode has terminated. Call reset() before step()."
-            )
+            raise RuntimeError("Episode has terminated. Call reset() before step().")
 
         logger.debug(
             "Executing environment step %d.",
@@ -337,9 +336,7 @@ class PowerGridEnv(gym.Env):
         # Apply Generator Control
         # ------------------------------------------------------------------
 
-        self.grid.set_generator_setpoints(
-            generator_action
-        )
+        self.grid.set_generator_setpoints(generator_action)
 
         # ------------------------------------------------------------------
         # Run AC Power Flow
@@ -375,9 +372,7 @@ class PowerGridEnv(gym.Env):
 
         self.current_step += 1
 
-        truncated = (
-            self.current_step >= MAX_EPISODE_STEPS
-        )
+        truncated = self.current_step >= MAX_EPISODE_STEPS
 
         self.done = terminated or truncated
 
@@ -390,8 +385,7 @@ class PowerGridEnv(gym.Env):
             "episode_reward": self.episode_reward,
             "power_flow_converged": self.grid.power_flow_converged,
             "frequency": physics_state["frequency"],
-            "frequency_deviation":
-                physics_state["frequency_deviation"],
+            "frequency_deviation": physics_state["frequency_deviation"],
             "stable": physics_state["stable"],
         }
 
@@ -408,6 +402,7 @@ class PowerGridEnv(gym.Env):
             info,
         )
         ###########################################################################
+
     # Observation Builder
     ###########################################################################
 
@@ -448,25 +443,17 @@ class PowerGridEnv(gym.Env):
 
         frequency = physics_state["frequency"]
 
-        frequency_deviation = (
-            physics_state["frequency_deviation"]
-        )
+        frequency_deviation = physics_state["frequency_deviation"]
 
         # ------------------------------------------------------------------
         # Electrical State
         # ------------------------------------------------------------------
 
-        bus_voltages = (
-            self.grid.get_bus_voltages()
-        )
+        bus_voltages = self.grid.get_bus_voltages()
 
-        generator_output, _ = (
-            self.grid.get_generator_outputs()
-        )
+        generator_output, _ = self.grid.get_generator_outputs()
 
-        line_loading = (
-            self.grid.get_line_loadings()
-        )
+        line_loading = self.grid.get_line_loadings()
 
         # ------------------------------------------------------------------
         # Build Observation
@@ -489,8 +476,8 @@ class PowerGridEnv(gym.Env):
 
         return observation
 
-
         ###########################################################################
+
     # Reward Function
     ###########################################################################
 
@@ -525,9 +512,7 @@ class PowerGridEnv(gym.Env):
 
         physics_state = self.physics.get_state()
 
-        frequency_deviation = abs(
-            physics_state["frequency_deviation"]
-        )
+        frequency_deviation = abs(physics_state["frequency_deviation"])
 
         # ------------------------------------------------------------------
         # Grid State
@@ -547,10 +532,7 @@ class PowerGridEnv(gym.Env):
         # Voltage Violations
         # ------------------------------------------------------------------
 
-        voltage_violations = np.sum(
-            (voltages < 0.95) |
-            (voltages > 1.05)
-        )
+        voltage_violations = np.sum((voltages < 0.95) | (voltages > 1.05))
 
         reward -= VOLTAGE_REWARD_WEIGHT * float(voltage_violations)
 
@@ -558,9 +540,7 @@ class PowerGridEnv(gym.Env):
         # Line Overloads
         # ------------------------------------------------------------------
 
-        overloads = np.sum(
-            line_loading > 100.0
-        )
+        overloads = np.sum(line_loading > 100.0)
 
         reward -= float(overloads)
 
@@ -573,10 +553,9 @@ class PowerGridEnv(gym.Env):
             reward += STABILITY_BONUS
 
         return float(reward)
-    
-    
-    
+
         ###########################################################################
+
     # Action Decoder
     ###########################################################################
 
@@ -622,19 +601,20 @@ class PowerGridEnv(gym.Env):
 
         if action.shape != (ACTION_DIM,):
 
-            raise ValueError(
-                f"Expected action shape {(ACTION_DIM,)}, "
-                f"received {action.shape}."
-            )
+            raise ValueError(f"Expected action shape {(ACTION_DIM,)}, " f"received {action.shape}.")
 
         # ------------------------------------------------------------------
         # Clip Action
         # ------------------------------------------------------------------
 
+        # Cast: gym.Env declares action_space as the generic Space[ActType]
+        # at the base-class level, so mypy sees Space[Any] here even though
+        # we always assign a Box in __init__. .low/.high are Box-specific.
+        action_space = cast(spaces.Box, self.action_space)
         action = np.clip(
             action,
-            self.action_space.low,
-            self.action_space.high,
+            action_space.low,
+            action_space.high,
         )
 
         # ------------------------------------------------------------------
@@ -653,8 +633,9 @@ class PowerGridEnv(gym.Env):
         generator_setpoints = action.copy()
 
         return generator_setpoints
-    
+
         ###########################################################################
+
     # Episode Termination
     ###########################################################################
 
@@ -693,14 +674,10 @@ class PowerGridEnv(gym.Env):
         # Frequency Limits
         # ------------------------------------------------------------------
 
-        if (
-            frequency < MIN_FREQUENCY
-            or frequency > MAX_FREQUENCY
-        ):
+        if frequency < MIN_FREQUENCY or frequency > MAX_FREQUENCY:
 
             logger.warning(
-                "Episode terminated due to frequency violation "
-                "(%.3f Hz).",
+                "Episode terminated due to frequency violation " "(%.3f Hz).",
                 frequency,
             )
 
@@ -712,16 +689,14 @@ class PowerGridEnv(gym.Env):
 
         if not self.grid.power_flow_converged:
 
-            logger.warning(
-                "Episode terminated because power flow "
-                "did not converge."
-            )
+            logger.warning("Episode terminated because power flow " "did not converge.")
 
             return True
 
         return False
-    
+
         ###########################################################################
+
     # Render
     ###########################################################################
 
@@ -747,15 +722,9 @@ class PowerGridEnv(gym.Env):
 
         print(f"Step                 : {self.current_step}")
         print(f"Frequency            : {state['frequency']:.4f} Hz")
-        print(
-            f"Frequency Deviation  : "
-            f"{state['frequency_deviation']:.4f} Hz"
-        )
+        print(f"Frequency Deviation  : " f"{state['frequency_deviation']:.4f} Hz")
         print(f"Stable               : {state['stable']}")
-        print(
-            f"Episode Reward       : "
-            f"{self.episode_reward:.4f}"
-        )
+        print(f"Episode Reward       : " f"{self.episode_reward:.4f}")
 
         print("=" * 60)
 
@@ -768,9 +737,7 @@ class PowerGridEnv(gym.Env):
         Release environment resources.
         """
 
-        logger.info(
-            "Closing PowerGridEnv."
-        )
+        logger.info("Closing PowerGridEnv.")
 
     ###########################################################################
     # Validation
@@ -788,33 +755,25 @@ class PowerGridEnv(gym.Env):
 
         if self.observation_space is None:
 
-            logger.error(
-                "Observation space not initialized."
-            )
+            logger.error("Observation space not initialized.")
 
             return False
 
         if self.action_space is None:
 
-            logger.error(
-                "Action space not initialized."
-            )
+            logger.error("Action space not initialized.")
 
             return False
 
         if self.grid is None:
 
-            logger.error(
-                "GridNetwork not initialized."
-            )
+            logger.error("GridNetwork not initialized.")
 
             return False
 
         if self.physics is None:
 
-            logger.error(
-                "GridPhysics not initialized."
-            )
+            logger.error("GridPhysics not initialized.")
 
             return False
 

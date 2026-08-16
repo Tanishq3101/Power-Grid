@@ -23,3 +23,22 @@ warn_unused_ignores = false
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v"
+
+[tool.coverage.run]
+# What actually counts toward coverage — project source, not tests/config/tools.
+source = ["env", "agents", "baselines", "evaluation", "training", "dashboard", "utils"]
+omit = [
+    "*/__pycache__/*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+# Days 6-22 files are still NotImplementedError stubs (by design, per the
+# blueprint) — don't let unreached lines in those inflate/deflate the number
+# misleadingly. Real threshold enforcement happens in ci.yml once those fill in.
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+]

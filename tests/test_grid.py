@@ -28,6 +28,7 @@ from env.grid_network import GridNetwork
 # Fixture
 ###############################################################################
 
+
 @pytest.fixture
 def grid() -> GridNetwork:
     """A loaded, power-flow-solved GridNetwork for each test."""
@@ -41,6 +42,7 @@ def grid() -> GridNetwork:
 # Network Loading + Power Flow
 ###############################################################################
 
+
 def test_network_loads(grid: GridNetwork) -> None:
     assert grid.is_loaded is True
 
@@ -52,6 +54,7 @@ def test_power_flow_converges(grid: GridNetwork) -> None:
 ###############################################################################
 # Bus / Generator / Load / Line Data
 ###############################################################################
+
 
 def test_bus_count(grid: GridNetwork) -> None:
     assert len(grid.get_bus_data()) == 14
@@ -73,6 +76,7 @@ def test_line_data_available(grid: GridNetwork) -> None:
 # Voltage Profile
 ###############################################################################
 
+
 def test_voltage_profile_within_reasonable_range(grid: GridNetwork) -> None:
     voltages = grid.get_voltage_profile()
 
@@ -84,6 +88,7 @@ def test_voltage_profile_within_reasonable_range(grid: GridNetwork) -> None:
 # Line Loading
 ###############################################################################
 
+
 def test_line_loading_non_negative(grid: GridNetwork) -> None:
     loading = grid.get_line_loading()
 
@@ -93,6 +98,7 @@ def test_line_loading_non_negative(grid: GridNetwork) -> None:
 ###############################################################################
 # Generation / Load Totals
 ###############################################################################
+
 
 def test_total_generation_positive(grid: GridNetwork) -> None:
     assert grid.get_total_generation() > 0
@@ -106,6 +112,7 @@ def test_total_load_positive(grid: GridNetwork) -> None:
 # Power Losses
 ###############################################################################
 
+
 def test_power_losses_non_negative(grid: GridNetwork) -> None:
     losses = grid.get_power_losses()
 
@@ -116,6 +123,7 @@ def test_power_losses_non_negative(grid: GridNetwork) -> None:
 ###############################################################################
 # Network Summary
 ###############################################################################
+
 
 def test_network_summary_has_expected_keys(grid: GridNetwork) -> None:
     summary = grid.network_summary()

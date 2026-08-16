@@ -27,8 +27,7 @@ class SolarModel:
     TODO Day 6: Implement fully
     """
 
-    def __init__(self, peak_mw=50.0, noise_std=5.0,
-                 cloud_event_prob=0.02, seed=None):
+    def __init__(self, peak_mw=50.0, noise_std=5.0, cloud_event_prob=0.02, seed=None):
         """
         Args:
             peak_mw        : peak solar output (MW)
@@ -36,11 +35,11 @@ class SolarModel:
             cloud_event_prob: probability of sudden cloud cover per step
             seed           : random seed for reproducibility
         """
-        self.peak_mw          = peak_mw
-        self.noise_std        = noise_std
+        self.peak_mw = peak_mw
+        self.noise_std = noise_std
         self.cloud_event_prob = cloud_event_prob
-        self.rng              = np.random.default_rng(seed)
-        self.current_output   = 0.0
+        self.rng = np.random.default_rng(seed)
+        self.current_output = 0.0
 
     def step(self, hour_of_day):
         """
@@ -68,8 +67,7 @@ class WindModel:
     TODO Day 6: Implement fully
     """
 
-    def __init__(self, peak_mw=80.0, noise_std=10.0,
-                 wind_stop_prob=0.01, seed=None):
+    def __init__(self, peak_mw=80.0, noise_std=10.0, wind_stop_prob=0.01, seed=None):
         """
         Args:
             peak_mw       : max wind output (MW)
@@ -77,10 +75,10 @@ class WindModel:
             wind_stop_prob: probability of sudden wind drop per step
             seed          : random seed
         """
-        self.peak_mw       = peak_mw
-        self.noise_std     = noise_std
+        self.peak_mw = peak_mw
+        self.noise_std = noise_std
         self.wind_stop_prob = wind_stop_prob
-        self.rng           = np.random.default_rng(seed)
+        self.rng = np.random.default_rng(seed)
         self.current_output = 0.0
 
     def step(self):
@@ -109,14 +107,14 @@ class RenewableManager:
 
     def __init__(self, config):
         self.solar = SolarModel(
-            peak_mw=config['renewables']['solar_peak_mw'],
-            noise_std=config['renewables']['solar_noise_std'],
-            cloud_event_prob=config['renewables']['cloud_event_prob'],
+            peak_mw=config["renewables"]["solar_peak_mw"],
+            noise_std=config["renewables"]["solar_noise_std"],
+            cloud_event_prob=config["renewables"]["cloud_event_prob"],
         )
         self.wind = WindModel(
-            peak_mw=config['renewables']['wind_peak_mw'],
-            noise_std=config['renewables']['wind_noise_std'],
-            wind_stop_prob=config['renewables']['wind_stop_prob'],
+            peak_mw=config["renewables"]["wind_peak_mw"],
+            noise_std=config["renewables"]["wind_noise_std"],
+            wind_stop_prob=config["renewables"]["wind_stop_prob"],
         )
         self.total_output = 0.0
 

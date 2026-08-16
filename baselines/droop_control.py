@@ -30,9 +30,9 @@ class DroopController:
     """
 
     def __init__(self, config):
-        self.R         = config['baselines']['droop_coefficient']
-        self.f_nominal = config['grid']['freq_nominal']
-        self.n_gen     = 5  # number of generators
+        self.R = config["baselines"]["droop_coefficient"]
+        self.f_nominal = config["grid"]["freq_nominal"]
+        self.n_gen = 5  # number of generators
 
     def act(self, observation, grid_state):
         """

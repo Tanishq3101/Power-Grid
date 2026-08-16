@@ -147,17 +147,13 @@ class GridNetwork:
                 self.net = pn.case14()
 
             else:
-                raise RuntimeError(
-                    f"Unsupported IEEE test system: {IEEE_CASE}"
-                )
+                raise RuntimeError(f"Unsupported IEEE test system: {IEEE_CASE}")
 
             self.original_net = copy.deepcopy(self.net)
 
             self.is_loaded = True
 
-            logger.info(
-                "IEEE 14-Bus network loaded successfully."
-            )
+            logger.info("IEEE 14-Bus network loaded successfully.")
 
         except Exception as error:
             logger.exception("Failed to load IEEE network.")
@@ -185,10 +181,7 @@ class GridNetwork:
         logger.info("Resetting IEEE network.")
 
         if self.original_net is None:
-            raise RuntimeError(
-                "Original network does not exist. "
-                "Call load_network() first."
-            )
+            raise RuntimeError("Original network does not exist. " "Call load_network() first.")
 
         self.net = copy.deepcopy(self.original_net)
 
@@ -197,6 +190,7 @@ class GridNetwork:
         logger.info("Network successfully restored.")
 
         # =====================================================================
+
     # POWER FLOW
     # =====================================================================
 
@@ -228,10 +222,7 @@ class GridNetwork:
         """
 
         if not self.is_loaded or self.net is None:
-            raise RuntimeError(
-                "Network has not been loaded. "
-                "Call load_network() first."
-            )
+            raise RuntimeError("Network has not been loaded. " "Call load_network() first.")
 
         logger.info("Running AC power flow...")
 
@@ -293,8 +284,6 @@ class GridNetwork:
         if not self.power_flow_converged:
             logger.error("Validation failed: power flow not converged.")
             return False
-
-       
 
         return True
 
@@ -375,6 +364,7 @@ class GridNetwork:
         return self.net.line.copy()
 
         # =====================================================================
+
     # VOLTAGE PROFILE
     # =====================================================================
 
@@ -395,8 +385,7 @@ class GridNetwork:
 
         if not self.validate_network():
             raise RuntimeError(
-                "Cannot obtain voltage profile before successful "
-                "power flow convergence."
+                "Cannot obtain voltage profile before successful " "power flow convergence."
             )
 
         return self.net.res_bus["vm_pu"].copy()
@@ -416,9 +405,7 @@ class GridNetwork:
         """
 
         if not self.validate_network():
-            raise RuntimeError(
-                "Power flow must converge before reading bus angles."
-            )
+            raise RuntimeError("Power flow must converge before reading bus angles.")
 
         return self.net.res_bus["va_degree"].copy()
 
@@ -437,15 +424,13 @@ class GridNetwork:
         """
 
         if not self.validate_network():
-            raise RuntimeError(
-                "Power flow must converge before reading line loading."
-            )
+            raise RuntimeError("Power flow must converge before reading line loading.")
 
         return self.net.res_line["loading_percent"].copy()
 
     ###############################################################################
-# BUS VOLTAGES
-###############################################################################
+    # BUS VOLTAGES
+    ###############################################################################
 
     def get_bus_voltages(self) -> np.ndarray:
         """
@@ -458,14 +443,14 @@ class GridNetwork:
         """
 
         return self.get_voltage_profile().to_numpy()
-    
+
     ###############################################################################
-# GENERATOR OUTPUTS
-###############################################################################
+    # GENERATOR OUTPUTS
+    ###############################################################################
 
     def get_generator_outputs(
-    self,
-) -> tuple[np.ndarray, np.ndarray]:
+        self,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Return generator active and reactive power outputs.
 
@@ -477,19 +462,16 @@ class GridNetwork:
 
         if not self.validate_network():
 
-            raise RuntimeError(
-                "Power flow must converge before reading generator outputs."
-            )
+            raise RuntimeError("Power flow must converge before reading generator outputs.")
 
         return (
             self.net.res_gen["p_mw"].to_numpy(),
             self.net.res_gen["q_mvar"].to_numpy(),
         )
-        
-        
-###############################################################################
-# LINE LOADINGS
-###############################################################################
+
+    ###############################################################################
+    # LINE LOADINGS
+    ###############################################################################
 
     def get_line_loadings(self) -> np.ndarray:
         """
@@ -502,15 +484,15 @@ class GridNetwork:
         """
 
         return self.get_line_loading().to_numpy()
-    
-###############################################################################
-# GENERATOR CONTROL
-###############################################################################
+
+    ###############################################################################
+    # GENERATOR CONTROL
+    ###############################################################################
 
     def set_generator_setpoints(
-    self,
-    generator_setpoints: np.ndarray,
-) -> None:
+        self,
+        generator_setpoints: np.ndarray,
+    ) -> None:
         """
         Apply generator active power setpoints.
 
@@ -522,9 +504,7 @@ class GridNetwork:
         Day 5:
             Actual generator dispatch will be implemented.
         """
-        logger.debug(
-    "Generator dispatch placeholder called."
-)
+        logger.debug("Generator dispatch placeholder called.")
         return
 
     # =====================================================================
@@ -546,9 +526,7 @@ class GridNetwork:
         """
 
         if not self.validate_network():
-            raise RuntimeError(
-                "Power flow must converge before generation calculation."
-            )
+            raise RuntimeError("Power flow must converge before generation calculation.")
 
         total_generation = 0.0
 
@@ -577,9 +555,7 @@ class GridNetwork:
         """
 
         if not self.validate_network():
-            raise RuntimeError(
-                "Power flow must converge before load calculation."
-            )
+            raise RuntimeError("Power flow must converge before load calculation.")
 
         total_load = self.net.res_load["p_mw"].sum()
 
@@ -607,9 +583,7 @@ class GridNetwork:
         """
 
         if not self.validate_network():
-            raise RuntimeError(
-                "Power flow must converge before computing losses."
-            )
+            raise RuntimeError("Power flow must converge before computing losses.")
 
         active_loss = self.net.res_line["pl_mw"].sum()
 
@@ -635,9 +609,7 @@ class GridNetwork:
         """
 
         if not self.validate_network():
-            raise RuntimeError(
-                "Network must be validated before creating summary."
-            )
+            raise RuntimeError("Network must be validated before creating summary.")
 
         losses = self.get_power_losses()
 
@@ -657,8 +629,9 @@ class GridNetwork:
         logger.info("Network summary generated successfully.")
 
         return summary
-    
+
         # =====================================================================
+
     # BUS RESULTS
     # =====================================================================
 
@@ -674,9 +647,7 @@ class GridNetwork:
         """
 
         if not self.validate_network():
-            raise RuntimeError(
-                "Power flow must converge before reading bus results."
-            )
+            raise RuntimeError("Power flow must converge before reading bus results.")
 
         return self.net.res_bus.copy()
 
@@ -695,9 +666,7 @@ class GridNetwork:
         """
 
         if not self.validate_network():
-            raise RuntimeError(
-                "Power flow must converge before reading generator results."
-            )
+            raise RuntimeError("Power flow must converge before reading generator results.")
 
         return self.net.res_gen.copy()
 
@@ -716,9 +685,7 @@ class GridNetwork:
         """
 
         if not self.validate_network():
-            raise RuntimeError(
-                "Power flow must converge before reading load results."
-            )
+            raise RuntimeError("Power flow must converge before reading load results.")
 
         return self.net.res_load.copy()
 
@@ -737,9 +704,7 @@ class GridNetwork:
         """
 
         if not self.validate_network():
-            raise RuntimeError(
-                "Power flow must converge before reading line results."
-            )
+            raise RuntimeError("Power flow must converge before reading line results.")
 
         return self.net.res_line.copy()
 

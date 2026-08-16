@@ -95,11 +95,11 @@ MAX_POWERFLOW_ITERATIONS = 20
 # These become active from Day 3 onwards.
 # =============================================================================
 
-INERTIA_CONSTANT = 5.0          # H (seconds)
+INERTIA_CONSTANT = 5.0  # H (seconds)
 
-DAMPING_COEFFICIENT = 1.0       # D
+DAMPING_COEFFICIENT = 1.0  # D
 
-TIME_STEP = 1.0                 # seconds
+TIME_STEP = 1.0  # seconds
 
 # =============================================================================
 # RENEWABLE GENERATION DEFAULTS
@@ -107,9 +107,9 @@ TIME_STEP = 1.0                 # seconds
 # Used from Week 3.
 # =============================================================================
 
-MAX_SOLAR_POWER = 50.0          # MW
+MAX_SOLAR_POWER = 50.0  # MW
 
-MAX_WIND_POWER = 75.0           # MW
+MAX_WIND_POWER = 75.0  # MW
 
 # =============================================================================
 # RL ENVIRONMENT SETTINGS
@@ -141,7 +141,7 @@ STABILITY_BONUS = 1.0
 # Used during Week 4.
 # =============================================================================
 
-DASH_REFRESH_INTERVAL = 1000     # milliseconds
+DASH_REFRESH_INTERVAL = 1000  # milliseconds
 
 # =============================================================================
 # PLOT SETTINGS

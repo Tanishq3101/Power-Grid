@@ -31,12 +31,12 @@ class AGCController:
     """
 
     def __init__(self, config):
-        self.Kp        = config['baselines']['agc_kp']
-        self.Ki        = config['baselines']['agc_ki']
-        self.f_nominal = config['grid']['freq_nominal']
-        self.B         = 1.0  # frequency bias
-        self.integral  = 0.0  # integral accumulator
-        self.dt        = config['physics']['dt']
+        self.Kp = config["baselines"]["agc_kp"]
+        self.Ki = config["baselines"]["agc_ki"]
+        self.f_nominal = config["grid"]["freq_nominal"]
+        self.B = 1.0  # frequency bias
+        self.integral = 0.0  # integral accumulator
+        self.dt = config["physics"]["dt"]
 
     def act(self, observation, grid_state):
         """

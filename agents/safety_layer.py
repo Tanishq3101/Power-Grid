@@ -31,15 +31,15 @@ class SafetyLayer:
     """
 
     def __init__(self, config):
-        sf = config['safety']
-        self.freq_min  = sf['freq_min']
-        self.freq_max  = sf['freq_max']
-        self.volt_min  = sf['volt_min']
-        self.volt_max  = sf['volt_max']
-        self.line_max  = sf['line_loading_max']
+        sf = config["safety"]
+        self.freq_min = sf["freq_min"]
+        self.freq_max = sf["freq_max"]
+        self.volt_min = sf["volt_min"]
+        self.volt_max = sf["volt_max"]
+        self.line_max = sf["line_loading_max"]
 
         self.violation_count = 0
-        self.total_steps     = 0
+        self.total_steps = 0
 
     def filter(self, action, grid_state):
         """
@@ -83,4 +83,4 @@ class SafetyLayer:
     def reset_stats(self):
         """Reset violation counters."""
         self.violation_count = 0
-        self.total_steps     = 0
+        self.total_steps = 0

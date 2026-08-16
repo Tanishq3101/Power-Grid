@@ -30,7 +30,7 @@ class OPFBaseline:
     """
 
     def __init__(self, config):
-        self.interval  = config['baselines']['opf_interval']
+        self.interval = config["baselines"]["opf_interval"]
         self.step_count = 0
         self.last_action = None
 
@@ -62,5 +62,5 @@ class OPFBaseline:
         raise NotImplementedError("Day 13: Implement _run_opf()")
 
     def reset(self):
-        self.step_count  = 0
+        self.step_count = 0
         self.last_action = None

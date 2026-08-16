@@ -29,17 +29,26 @@ class GridMetrics:
 
     def reset(self):
         """Reset all metric accumulators."""
-        self.freq_deviations    = []
+        self.freq_deviations = []
         self.voltage_violations = []
-        self.generation_costs   = []
-        self.blackout_count     = 0
-        self.recovery_times     = []
-        self.safety_violations  = 0
-        self.total_steps        = 0
-        self.total_episodes     = 0
+        self.generation_costs = []
+        self.blackout_count = 0
+        self.recovery_times = []
+        self.safety_violations = 0
+        self.total_steps = 0
+        self.total_episodes = 0
 
-    def update(self, freq, voltages, gen_cost, blackout,
-               safety_viol, volt_min=0.95, volt_max=1.05, f_nominal=50.0):
+    def update(
+        self,
+        freq,
+        voltages,
+        gen_cost,
+        blackout,
+        safety_viol,
+        volt_min=0.95,
+        volt_max=1.05,
+        f_nominal=50.0,
+    ):
         """
         Update metrics with one timestep of data.
 

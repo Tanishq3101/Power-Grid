@@ -29,6 +29,7 @@ from config.constants import NOMINAL_FREQUENCY
 # Fixture
 ###############################################################################
 
+
 @pytest.fixture
 def physics() -> GridPhysics:
     """Fresh GridPhysics instance for each test (isolated state)."""
@@ -38,6 +39,7 @@ def physics() -> GridPhysics:
 ###############################################################################
 # Initial State
 ###############################################################################
+
 
 def test_initial_state(physics: GridPhysics) -> None:
     """A freshly constructed engine should start at nominal frequency."""
@@ -51,6 +53,7 @@ def test_initial_state(physics: GridPhysics) -> None:
 ###############################################################################
 # Generator Trip
 ###############################################################################
+
 
 def test_generator_trip_drops_frequency(physics: GridPhysics) -> None:
     """A generator trip (loss of generation) should push frequency down."""
@@ -66,6 +69,7 @@ def test_generator_trip_drops_frequency(physics: GridPhysics) -> None:
 ###############################################################################
 # Reset
 ###############################################################################
+
 
 def test_reset_restores_nominal_frequency(physics: GridPhysics) -> None:
     """After a disturbance, reset() should return to nominal frequency."""
@@ -84,6 +88,7 @@ def test_reset_restores_nominal_frequency(physics: GridPhysics) -> None:
 # Load Increase
 ###############################################################################
 
+
 def test_load_increase_drops_frequency(physics: GridPhysics) -> None:
     """An increase in load (without matching generation) drops frequency."""
     physics.apply_load_change(10)
@@ -97,6 +102,7 @@ def test_load_increase_drops_frequency(physics: GridPhysics) -> None:
 ###############################################################################
 # Renewable Fluctuation
 ###############################################################################
+
 
 def test_renewable_increase_raises_frequency(physics: GridPhysics) -> None:
     """A renewable generation increase should push frequency back up."""
@@ -119,6 +125,7 @@ def test_renewable_increase_raises_frequency(physics: GridPhysics) -> None:
 # Automatic Recovery
 ###############################################################################
 
+
 def test_recovery_reduces_power_imbalance(physics: GridPhysics) -> None:
     """Repeated restore_nominal_operation() calls should shrink the
     magnitude of the power imbalance over time."""
@@ -139,6 +146,7 @@ def test_recovery_reduces_power_imbalance(physics: GridPhysics) -> None:
 ###############################################################################
 # Validation
 ###############################################################################
+
 
 def test_validate_returns_true_for_healthy_engine(physics: GridPhysics) -> None:
     """A properly constructed engine should always validate as True."""

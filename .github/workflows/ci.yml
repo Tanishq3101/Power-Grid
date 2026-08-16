@@ -71,20 +71,34 @@ jobs:
       - name: Run mypy (lenient)
         run: mypy . --no-error-summary || mypy .
 
-  tests:
-    name: "Tests — Day ${{ matrix.day }} (${{ matrix.file }})"
+  discover-tests:
+    name: Discover test files
     runs-on: ubuntu-latest
     needs: [format-check, lint-real-bugs]
+    outputs:
+      files: ${{ steps.find.outputs.files }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Finds every tests/test_*.py file that exists RIGHT NOW and turns it
+      # into a JSON array for the matrix below. No file names are hardcoded
+      # here — add tests/test_renewable.py, tests/test_safety_layer.py, etc.
+      # on any future day and it gets its own CI job automatically.
+      - name: Find test files
+        id: find
+        run: |
+          FILES=$(find tests -maxdepth 1 -name 'test_*.py' -printf '%p\n' | sort | jq -R -s -c 'split("\n")[:-1]')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+          echo "Discovered: $FILES"
+
+  tests:
+    name: "Tests (${{ matrix.file }})"
+    runs-on: ubuntu-latest
+    needs: [discover-tests]
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - file: tests/test_grid.py
-            day: "2"
-          - file: tests/test_physics.py
-            day: "3"
-          - file: tests/test_environment.py
-            day: "4"
+        file: ${{ fromJson(needs.discover-tests.outputs.files) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -98,6 +112,88 @@ jobs:
 
       - name: Run ${{ matrix.file }}
         run: pytest ${{ matrix.file }} --cov=. --cov-report=term-missing
+
+  coverage:
+    name: Combined coverage report
+    runs-on: ubuntu-latest
+    needs: [tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Runs the WHOLE suite together (unlike the per-file matrix above),
+      # so this is the true combined number across every test_*.py —
+      # not each file's coverage counted in isolation.
+      # cov-fail-under is intentionally low right now because most files
+      # (Days 6-22 in the blueprint) are still NotImplementedError stubs;
+      # raise this number as those get implemented.
+      - name: Run full suite with coverage
+        run: |
+          pytest tests/ \
+            --cov \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-fail-under=40
+
+      - name: Upload coverage report (HTML + XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            htmlcov/
+            coverage.xml
+          retention-days: 14
+
+  regression-guard:
+    name: Block deleting/skipping previous-day tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [discover-tests]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # This is the actual enforcement of "new day must not break previous
+      # day": nobody can silently delete, rename, or skip an old day's test
+      # file to make a broken change go green. If a test genuinely needs to
+      # be retired, that's a team decision made in the PR description, not
+      # a quiet file removal.
+      - name: Compare test files against base branch
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+          BASE_FILES=$(git ls-tree -r --name-only origin/${{ github.event.pull_request.base.ref }} -- tests | grep -E 'test_.*\.py$' | sort || true)
+          HEAD_FILES=$(git ls-tree -r --name-only HEAD -- tests | grep -E 'test_.*\.py$' | sort || true)
+          REMOVED=$(comm -23 <(echo "$BASE_FILES") <(echo "$HEAD_FILES"))
+          if [ -n "$REMOVED" ]; then
+            echo "These previous-day test files were removed or renamed in this PR:"
+            echo "$REMOVED"
+            echo ""
+            echo "If a test truly needs retiring, get sign-off from the team and say why in the PR description — don't delete it to dodge a failing check."
+            exit 1
+          fi
+          echo "No previous-day test files were removed."
+
+      # Same idea but for @pytest.mark.skip / xfail added to existing
+      # test files — another way to quietly turn a real failure green.
+      - name: Fail if any test was newly marked skip/xfail
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+          if git diff origin/${{ github.event.pull_request.base.ref }}...HEAD -- tests | grep -E '^\+.*@pytest\.mark\.(skip|xfail)'; then
+            echo ""
+            echo "This PR adds a skip/xfail marker to a test. If a previous day's test is broken, fix the break — don't skip the test that caught it."
+            exit 1
+          fi
+          echo "No new skip/xfail markers added."
 
   tests-collected-check:
     name: Fail if no tests were collected

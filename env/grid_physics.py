@@ -207,19 +207,17 @@ class GridPhysics:
         """
 
         if not self.initialized:
-            raise RuntimeError(
-                "GridPhysics has not been initialized."
-            )
+            raise RuntimeError("GridPhysics has not been initialized.")
 
         logger.info("Resetting physics engine.")
 
         self.state = PhysicsState()
 
         logger.info("Physics engine reset completed.")
-        
-###################################
 
-        ###########################################################################
+    ###################################
+
+    ###########################################################################
     # Power Imbalance
     ###########################################################################
 
@@ -275,14 +273,10 @@ class GridPhysics:
         """
 
         if not self.initialized:
-            raise RuntimeError(
-                "GridPhysics has not been initialized."
-            )
+            raise RuntimeError("GridPhysics has not been initialized.")
 
         numerator = (
-            self.state.power_imbalance
-            - self.damping_coefficient
-            * self.state.frequency_deviation
+            self.state.power_imbalance - self.damping_coefficient * self.state.frequency_deviation
         )
 
         denominator = 2.0 * self.inertia_constant
@@ -307,14 +301,9 @@ class GridPhysics:
 
         derivative = self.compute_frequency_derivative()
 
-        self.state.frequency_deviation += (
-            derivative * self.time_step
-        )
+        self.state.frequency_deviation += derivative * self.time_step
 
-        self.state.frequency = (
-            self.nominal_frequency
-            + self.state.frequency_deviation
-        )
+        self.state.frequency = self.nominal_frequency + self.state.frequency_deviation
 
         self.state.simulation_time += self.time_step
 
@@ -345,10 +334,10 @@ class GridPhysics:
             )
 
         return self.get_state()
-    
+
     ###########################################################################
-    
-        ###########################################################################
+
+    ###########################################################################
     # Generator Disturbance
     ###########################################################################
 
@@ -368,9 +357,7 @@ class GridPhysics:
         """
 
         if generation_loss < 0:
-            raise ValueError(
-                "Generation loss must be non-negative."
-            )
+            raise ValueError("Generation loss must be non-negative.")
 
         logger.warning(
             "Generator trip detected: %.2f MW lost.",
@@ -449,9 +436,8 @@ class GridPhysics:
         Phase-1 uses exponential decay.
         """
 
-        self.state.power_imbalance *= (
-            1.0 - RECOVERY_RATE
-        )
+        self.state.power_imbalance *= 1.0 - RECOVERY_RATE
+
     ###########################################################################
     # Frequency Limits
     ###########################################################################
@@ -462,11 +448,7 @@ class GridPhysics:
         remains inside acceptable operating limits.
         """
 
-        return (
-            MIN_FREQUENCY
-            <= self.state.frequency
-            <= MAX_FREQUENCY
-        )
+        return MIN_FREQUENCY <= self.state.frequency <= MAX_FREQUENCY
 
     ###########################################################################
     # Stability Check
@@ -487,23 +469,14 @@ class GridPhysics:
 
         frequency_ok = self.frequency_within_limits()
 
-        deviation_ok = (
-            abs(self.state.frequency_deviation)
-            < FREQUENCY_STABILITY_THRESHOLD
-        )
+        deviation_ok = abs(self.state.frequency_deviation) < FREQUENCY_STABILITY_THRESHOLD
 
-        imbalance_ok = (
-            abs(self.state.power_imbalance)
-            < POWER_IMBALANCE_THRESHOLD
-        )
+        imbalance_ok = abs(self.state.power_imbalance) < POWER_IMBALANCE_THRESHOLD
 
-        return (
-            frequency_ok
-            and deviation_ok
-            and imbalance_ok
-        )
+        return frequency_ok and deviation_ok and imbalance_ok
+
     #################################
-        ###########################################################################
+    ###########################################################################
     # Frequency Getters
     ###########################################################################
 
@@ -597,15 +570,11 @@ class GridPhysics:
         """
 
         if not self.initialized:
-            logger.error(
-                "Physics engine has not been initialized."
-            )
+            logger.error("Physics engine has not been initialized.")
             return False
 
         if self.inertia_constant <= 0:
-            logger.error(
-                "Invalid inertia constant."
-            )
+            logger.error("Invalid inertia constant.")
             return False
 
         if self.time_step <= 0:
@@ -619,9 +588,7 @@ class GridPhysics:
 
         if self.max_simulation_time <= 0:
 
-            logger.error(
-                "Invalid maximum simulation time."
-            )
+            logger.error("Invalid maximum simulation time.")
             return False
 
         return True
@@ -653,9 +620,10 @@ class GridPhysics:
         """
 
         return self.__str__()
-    
-    
+
     # ============================================================================
+
+
 # TODO (Future Versions)
 #
 # Current implementation uses a simplified single-machine swing equation.

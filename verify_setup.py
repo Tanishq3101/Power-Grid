@@ -95,10 +95,7 @@ def test_gymnasium():
     assert obs.shape == env.observation_space.shape
     assert action.shape == env.action_space.shape
 
-    print(
-        f"       Obs space: {env.observation_space}, "
-        f"Action space: {env.action_space}"
-    )
+    print(f"       Obs space: {env.observation_space}, " f"Action space: {env.action_space}")
 
     env.close()
 
@@ -164,10 +161,7 @@ def test_cvxpy():
 
     assert prob.status == "optimal"
 
-    print(
-        f"       OPF test LP: status={prob.status}, "
-        f"cost={prob.value:.1f}"
-    )
+    print(f"       OPF test LP: status={prob.status}, " f"cost={prob.value:.1f}")
 
 
 check("CVXPY small OPF test", test_cvxpy)
