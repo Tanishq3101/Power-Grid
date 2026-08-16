@@ -59,44 +59,109 @@ Daily habit, before opening a PR:
 ## 🧪 CI / Testing Setup (built, in `.github/workflows/ci.yml`)
 
 ```
-This project's CI has 6 jobs. Know what each one does before you
-push — it's what stands between a broken day and main.
+This project's CI has 6 jobs (format-check / black+isort was tried and
+then deliberately removed — see note below). Know what each one does
+before you push — it's what stands between a broken day and main.
 
-1. format-check       → black + isort, settings from pyproject.toml
-2. lint-real-bugs      → flake8, but ONLY real-bug codes (E9/F63/F7/F82),
-                         not cosmetic nitpicks
-3. type-check          → mypy, lenient mode (catches real type mismatches,
-                         not missing annotations)
-4. discover-tests →
-   tests (matrix)       → finds every tests/test_*.py automatically and
-                         runs each as its own CI job — add a test file on
-                         any future day and it's picked up with zero
-                         edits to ci.yml
-5. regression-guard     → PR-only. Fails the PR if a previous-day test
-                         file was deleted/renamed, or if a skip/xfail
-                         marker was newly added to an existing test.
-                         This is what actually enforces the Golden Rule
-                         above at the CI level.
-6. coverage             → runs the FULL suite together (true combined
-                         number, not per-file) and reports term +
-                         HTML + XML. Currently fails under 40% —
-                         intentionally low because Days 6-22 files are
-                         still NotImplementedError stubs by design. Raise
-                         this number as those days get implemented.
-                         HTML/XML report uploaded as a downloadable
-                         artifact on every run (14-day retention) so
-                         any of the 3 of us can check exactly which
-                         lines are untested.
-7. tests-collected-check → backstop: fails loud if pytest somehow
-                         collects zero tests (e.g. tests/ misconfigured),
-                         instead of silently passing on nothing.
+1. lint-real-bugs        → flake8, but ONLY real-bug codes (E9/F63/F7/F82),
+                          not cosmetic nitpicks
+2. type-check             → mypy, lenient mode (catches real type mismatches,
+                          not missing annotations)
+3. discover-tests →
+   tests (matrix)         → finds every tests/test_*.py automatically and
+                          runs each as its own CI job — add a test file on
+                          any future day and it's picked up with zero
+                          edits to ci.yml. Check names are DYNAMIC (e.g.
+                          "Tests (tests/test_grid.py)") — do NOT add these
+                          individually to required branch-protection checks,
+                          see below for why.
+4. coverage               → runs the FULL suite together (true combined
+                          number, not per-file) and reports term +
+                          HTML + XML. Currently fails under 40% —
+                          intentionally low because Days 6-22 files are
+                          still NotImplementedError stubs by design. Raise
+                          this number as those days get implemented.
+                          HTML/XML report uploaded as a downloadable
+                          artifact on every run (14-day retention) so
+                          any of the 3 of us can check exactly which
+                          lines are untested. needs: [tests] — so if any
+                          test file fails, this job never runs, which
+                          means it never reports success, which means a
+                          required branch-protection check on THIS job
+                          alone is enough to block a broken PR without
+                          needing to require every dynamic matrix name.
+5. regression-guard        → PR-ONLY (if: github.event_name == 'pull_request').
+                          It will show as SKIPPED (not failed) on a
+                          direct push to main — that's correct, expected
+                          behavior, not a bug. Fails the PR if a previous-
+                          day test file was deleted/renamed, or if a
+                          skip/xfail marker was newly added to an existing
+                          test. This is what actually enforces the Golden
+                          Rule above at the CI level.
+6. tests-collected-check  → backstop: fails loud if pytest somehow
+                          collects zero tests (e.g. tests/ misconfigured),
+                          instead of silently passing on nothing. Also
+                          needs: [tests], same blocking property as coverage.
+
+Why format-check (black + isort) got removed:
+→ It caught real CI failures (imports out of alphabetical order,
+  section-comment banners breaking isort's grouping) but every single
+  one was cosmetic — zero effect on behavior, confirmed by re-parsing
+  every affected file with ast.parse() before/after. black/isort are
+  still listed in requirements.txt if anyone wants to run them locally,
+  but nothing in CI enforces formatting anymore. Tradeoff: import-order
+  merge conflicts between the 3 of us are now possible again. If that
+  becomes a real annoyance, re-add the job, or better — wire isort into
+  .pre-commit-config.yaml as a local hook instead of a CI gate.
 
 Coverage config lives in pyproject.toml under [tool.coverage.run] /
 [tool.coverage.report] — source is scoped to real code dirs (env,
 agents, baselines, evaluation, training, dashboard, utils), and stub
 NotImplementedError bodies are excluded so unbuilt Day 6-22 files
 don't distort the number.
+
+tests/conftest.py adds the project root to sys.path so `import env.*`,
+`import config.*` etc. resolve regardless of where/how pytest is
+invoked — a safety net on top of pytest's automatic package-based path
+insertion (which already works today because tests/__init__.py exists).
 ```
+
+---
+## 🔐 Repo Access + Branch Protection (set up on GitHub, not in code)
+
+```
+Repo lives under one person's personal GitHub account — there is no
+separate "admin tier" the way an Organization has; access is just a
+role granted per person under Settings → Collaborators and teams.
+Check that page directly if you ever need to confirm who has what,
+rather than assuming.
+
+Branch protection rule on main (Settings → Branches):
+✅ Require a pull request before merging
+✅ Require approvals — 1 minimum
+✅ Dismiss stale PR approvals when new commits are pushed
+✅ Require status checks to pass before merging, specifically:
+     - Lint (real bugs only, no cosmetics)
+     - Type check (mypy, non-strict)
+     - Combined coverage report
+     - Fail if no tests were collected
+     - Block deleting/skipping previous-day tests
+   (NOT the individual dynamic "Tests (tests/test_X.py)" checks —
+   coverage + tests-collected-check both depend on the full tests
+   matrix passing first, so requiring just those two already blocks
+   any broken test file without needing to hand-pick every matrix name)
+✅ Require branches to be up to date before merging
+✅ Allow force pushes — OFF
+✅ Allow deletions — OFF
+✅ Do not allow bypassing the above settings — ON (applies the rules
+   to admins/owners too, not just collaborators)
+
+The two non-owner collaborators only need Write access (the normal
+default when you invite someone) — Write can push branches, open PRs,
+and approve reviews, but cannot touch branch protection or bypass it.
+Only the repo owner can change these settings.
+```
+
 
 ---
 ## 📦 What We Will Have at Day 30
@@ -328,7 +393,7 @@ Deliverable:
 ✅ Reward changes with actions
 ✅ Done triggers on blackout
 ✅ pytest tests/ passes — Days 2-4 tests still green
-✅ CI green: format-check, lint-real-bugs, type-check, tests, coverage
+✅ CI green: lint-real-bugs, type-check, tests, coverage
 ```
 ---
 ### Day 6 — Load Profiles + Disturbances
@@ -982,7 +1047,7 @@ Deliverable:
 ✅ Anyone can understand project
 ✅ Anyone can run project
 ✅ Results clearly shown
-✅ README documents the CI setup (7 jobs, dynamic test discovery,
+✅ README documents the CI setup (6 jobs, dynamic test discovery,
   regression-guard, coverage threshold) so a new team member — or a
   reviewer — understands the testing discipline without reading git log
 ```
@@ -1038,9 +1103,10 @@ Deliverable:
 ✅ Professional appearance
 ✅ Demo GIF in README
 ✅ Requirements documented
-✅ Branch protection on main requires the CI checks (format-check,
-  lint-real-bugs, type-check, tests, regression-guard, coverage,
-  tests-collected-check) before any of the 3 of us can merge
+✅ Branch protection on main already configured (see 🔐 section near the
+  top of this doc) — required checks are lint-real-bugs, type-check,
+  coverage, tests-collected-check, regression-guard; 1 approval
+  required; force-push/deletion disabled; bypass disabled for admins too
 Day 30
 Goal:
 Complete project reviewed
