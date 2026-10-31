@@ -21,9 +21,8 @@ from __future__ import annotations
 
 import pytest
 
-from env.grid_physics import GridPhysics
 from config.constants import NOMINAL_FREQUENCY
-
+from env.grid_physics import GridPhysics
 
 ###############################################################################
 # Fixture

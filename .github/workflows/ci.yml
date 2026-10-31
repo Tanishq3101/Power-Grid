@@ -9,10 +9,11 @@ on:
 permissions:
   contents: read
 
-# A newer push to the same branch/PR makes the older run obsolete.
+# A newer push to the same PR makes the older run obsolete. Runs on main are
+# never cancelled, so every merged commit gets a complete result.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   gates:
@@ -33,20 +34,25 @@ jobs:
       - name: Every implemented module has tests
         run: python .github/scripts/check_test_files.py
 
-      # 2. Every day up to current_day must have its own named tests.
+      # 2. Every day up to current_day has its own named tests, and none of
+      #    them is skipped or xfailed.
       - name: Every day has tests
+        if: github.event_name != 'pull_request'
         run: python .github/scripts/check_day_gates.py
 
-      # 3. Pull requests may not lower current_day, drop a day, or remove a
-      #    required test, and may not skip/xfail tests to hide a failure.
-      - name: Previous days are not weakened
+      # 3. Same checks for pull requests, plus: no lowering current_day, no
+      #    dropped day or required test, no removed or renamed test file, and
+      #    no newly added skip/xfail marker anywhere in tests/.
+      - name: Every day has tests and previous days are not weakened
         if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin ${{ github.base_ref }} --depth=1
-          python .github/scripts/check_day_gates.py --base-ref origin/${{ github.base_ref }}
+          git fetch origin "$BASE_REF"
+          python .github/scripts/check_day_gates.py --base-ref "origin/$BASE_REF"
 
           REMOVED=$(comm -23 \
-            <(git ls-tree -r --name-only origin/${{ github.base_ref }} -- tests | grep -E 'test_.*\.py$' | sort) \
+            <(git ls-tree -r --name-only "origin/$BASE_REF" -- tests | grep -E 'test_.*\.py$' | sort) \
             <(git ls-tree -r --name-only HEAD -- tests | grep -E 'test_.*\.py$' | sort))
           if [ -n "$REMOVED" ]; then
             echo "::error::Test files removed or renamed in this PR:"
@@ -54,7 +60,7 @@ jobs:
             exit 1
           fi
 
-          if git diff origin/${{ github.base_ref }}...HEAD -- tests | grep -E '^\+.*@pytest\.mark\.(skip|xfail)'; then
+          if git diff "origin/$BASE_REF...HEAD" -- tests | grep -E '^\+.*(@(pytest\.)?mark\.(skip|xfail)|pytest\.(skip|xfail)\()'; then
             echo "::error::This PR adds a skip/xfail marker. Fix the failing test instead."
             exit 1
           fi
@@ -101,14 +107,50 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # pytest exits non-zero when no tests are collected, so an empty
-      # suite cannot pass. Raise --cov-fail-under as Days 6-22 land.
+      # pytest exits non-zero when no tests are collected, so an empty suite
+      # cannot pass. The coverage floor (fail_under) lives in pyproject.toml.
       - name: Run full suite
-        run: pytest tests/ --cov --cov-report=term-missing --cov-fail-under=40
+        run: pytest tests/ --cov --cov-report=term-missing --cov-report=xml --junitxml=junit.xml
+
+      # Catches every way of skipping at run time: markers, pytest.skip(),
+      # importorskip and xfail all show up as <skipped> in the JUnit report.
+      - name: No skipped or xfailed tests
+        run: |
+          python - <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          cases = list(ET.parse("junit.xml").getroot().iter("testcase"))
+          skipped = [
+              f"{case.get('classname')}::{case.get('name')}"
+              for case in cases
+              if case.find("skipped") is not None
+          ]
+          if not cases:
+              print("::error::No tests were collected.")
+              sys.exit(1)
+          if skipped:
+              print("::error::Skipped or xfailed tests are not allowed:")
+              print("\n".join(skipped))
+              sys.exit(1)
+          print(f"OK: {len(cases)} tests ran, none skipped.")
+          PY
+
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            junit.xml
+            coverage.xml
+          if-no-files-found: ignore
+          retention-days: 14
 
   ci-passed:
     name: CI passed
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [gates, quality, tests]
     if: always()
     steps:
