@@ -24,7 +24,6 @@ from typing import Generator
 import numpy as np
 import pytest
 
-from env.grid_env import PowerGridEnv
 from config.constants import (
     ACTION_DIM,
     BLACKOUT_PENALTY,
@@ -33,7 +32,7 @@ from config.constants import (
     GENERATOR_MIN_MW,
     OBSERVATION_DIM,
 )
-
+from env.grid_env import PowerGridEnv
 
 ###############################################################################
 # Fixture

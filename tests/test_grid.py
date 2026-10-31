@@ -28,7 +28,6 @@ from config.constants import GENERATOR_MAX_MW, GENERATOR_MIN_MW
 from env import grid_network
 from env.grid_network import GridNetwork
 
-
 ###############################################################################
 # Fixture
 ###############################################################################
