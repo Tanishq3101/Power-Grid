@@ -9,17 +9,17 @@
 # -----------------------------------------------------------------------------
 # Core project dependencies (Day 1 install list)
 # -----------------------------------------------------------------------------
-pandapower==3.5.4
-gymnasium==1.3.0
-stable-baselines3==2.9.0
-torch==2.13.0
-cvxpy==1.7.5
+pandapower==3.5.6
+gymnasium==1.4.0
+stable-baselines3==2.9.2
+torch==2.14.1
+cvxpy==1.9.3
 plotly==6.9.0
 dash==4.4.1
-numpy==2.2.6
-scipy==1.15.3
-matplotlib==3.10.9
-pettingzoo==1.26.1
+numpy==2.5.4
+scipy==1.18.1
+matplotlib==3.11.2
+pettingzoo==1.27.0
 
 # -----------------------------------------------------------------------------
 # Additional direct dependencies used later in the blueprint
@@ -36,72 +36,72 @@ pandas==2.3.3
 annotated-types==0.8.0
 blinker==1.9.0
 cachebox==5.2.3
-certifi==2026.7.22
+certifi==2026.10.23
 cffi==2.1.1
-charset-normalizer==3.4.9
+charset-normalizer==3.5.2
 clarabel==0.11.1
-click==8.4.2
+click==8.5.0
 cloudpickle==3.1.2
 colorama==0.4.6
 comm==0.2.3
-contourpy==1.3.2
+contourpy==1.4.0
 cycler==0.12.1
 deepdiff==9.1.0
 farama-notifications==0.0.6
-filelock==3.32.2
+filelock==3.32.7
 Flask==3.1.3
-fonttools==4.63.0
-fsspec==2026.7.0
+fonttools==4.68.0
+fsspec==2026.9.0
 geojson==3.3.0
-idna==3.18
-importlib-metadata==9.0.0
+idna==3.20
+importlib-metadata==9.1.0
 itsdangerous==2.2.0
 janus==2.0.0
 Jinja2==3.1.6
-joblib==1.5.3
-kiwisolver==1.5.0
-llvmlite==0.48.0
-MarkupSafe==3.0.3
-mpmath==1.3.0
+joblib==1.6.0
+kiwisolver==1.5.1
+llvmlite==0.50.0
+MarkupSafe==3.0.4
+mpmath==1.4.1
 mypy-extensions==1.1.0
 narwhals==2.28.0
 nest-asyncio==1.6.0
-networkx==3.4.2
-numba==0.66.0
+networkx==3.7
+numba==0.68.1
 orderly-set==5.5.0
 osqp==1.1.3
-packaging==26.1
-pandera==0.32.1
+packaging==26.3
+pandera==0.35.0
 pillow==12.3.0
-pycparser==3.0
-pydantic==2.13.4
-pydantic_core==2.46.4
-pyparsing==3.3.2
+pycparser==3.12
+pydantic==2.14.1
+pydantic_core==2.50.1
+pyparsing==3.3.3
 python-dateutil==2.9.0.post0
-pytz==2026.3.post1
+pytz==2026.5
 requests==2.34.2
 retrying==1.4.2
-scs==3.2.11
+scs==3.3.1
 six==1.17.0
 sympy==1.14.0
-tqdm==4.70.0
+tqdm==4.70.1
 typeguard==4.6.0
 typing-extensions==4.16.0
 typing-inspect==0.9.0
-typing-inspection==0.4.2
-tzdata==2026.3
-urllib3==2.7.0
-Werkzeug==3.1.8
-zipp==4.1.0
+typing-inspection==0.4.4
+tzdata==2026.6
+urllib3==2.8.0
+Werkzeug==3.1.9
+zipp==4.1.2
 
 # -----------------------------------------------------------------------------
 # Dev / CI tooling (formatting, linting, type-checking, testing)
 # Matches pyproject.toml [tool.black] / [tool.isort] / [tool.mypy] config
 # -----------------------------------------------------------------------------
-black==24.8.0
+black==24.10.0
 isort==5.13.2
-flake8==7.1.1
-mypy==1.11.2
-types-PyYAML>=6.0.12
-pytest==8.3.2
+flake8==7.4.1
+mypy==1.20.2
+types-PyYAML>=6.0.12.20260906
+pytest==8.4.2
 pytest-cov==5.0.0
