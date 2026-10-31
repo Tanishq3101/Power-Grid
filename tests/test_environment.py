@@ -21,10 +21,18 @@ from __future__ import annotations
 
 from typing import Generator
 
+import numpy as np
 import pytest
 
 from env.grid_env import PowerGridEnv
-from config.constants import OBSERVATION_DIM, ACTION_DIM
+from config.constants import (
+    ACTION_DIM,
+    BLACKOUT_PENALTY,
+    DISPATCH_RANGE_MW,
+    GENERATOR_MAX_MW,
+    GENERATOR_MIN_MW,
+    OBSERVATION_DIM,
+)
 
 
 ###############################################################################
@@ -130,3 +138,92 @@ def test_str_representation(env: PowerGridEnv) -> None:
     env.reset()
 
     assert "PowerGridEnv" in str(env)
+
+
+###############################################################################
+# Day 5: Dispatch, Reward and Termination
+###############################################################################
+
+
+def test_random_actions_run_100_steps(env: PowerGridEnv) -> None:
+    """Blueprint test: 100 random actions run without errors."""
+    env.reset(seed=0)
+
+    for _ in range(100):
+        observation, reward, terminated, truncated, _ = env.step(env.action_space.sample())
+
+        assert observation.shape == (OBSERVATION_DIM,)
+        assert np.isfinite(observation).all()
+        assert np.isfinite(reward)
+
+        if terminated or truncated:
+            env.reset(seed=0)
+
+
+def test_decode_action_scales_to_mw(env: PowerGridEnv) -> None:
+    env.reset()
+    base = env.grid.get_base_generator_setpoints()
+
+    zero = env._decode_action(np.zeros(ACTION_DIM, dtype=np.float32))
+    full = env._decode_action(np.ones(ACTION_DIM, dtype=np.float32))
+
+    assert zero == pytest.approx(base)
+    assert full == pytest.approx(base + DISPATCH_RANGE_MW)
+
+
+def test_action_changes_generator_dispatch(env: PowerGridEnv) -> None:
+    env.reset()
+    env.step(np.ones(ACTION_DIM, dtype=np.float32))
+
+    setpoints = env.grid.net.gen["p_mw"].to_numpy()
+    base = env.grid.get_base_generator_setpoints()
+
+    assert (setpoints >= GENERATOR_MIN_MW).all()
+    assert (setpoints <= GENERATOR_MAX_MW).all()
+    assert setpoints.sum() > base.sum()
+
+
+def test_extra_generation_raises_frequency(env: PowerGridEnv) -> None:
+    env.reset()
+    _, _, _, _, info = env.step(np.ones(ACTION_DIM, dtype=np.float32))
+
+    assert info["frequency"] > 50.0
+
+    env.reset()
+    _, _, _, _, info = env.step(-np.ones(ACTION_DIM, dtype=np.float32))
+
+    assert info["frequency"] < 50.0
+
+
+def test_reward_changes_with_actions() -> None:
+    rewards = []
+
+    for value in (0.0, 1.0):
+        environment = PowerGridEnv()
+        environment.reset()
+        _, reward, _, _, _ = environment.step(np.full(ACTION_DIM, value, dtype=np.float32))
+        rewards.append(reward)
+        environment.close()
+
+    assert rewards[0] != pytest.approx(rewards[1])
+
+
+def test_blackout_terminates_with_penalty(env: PowerGridEnv) -> None:
+    """A huge generation shortfall must end the episode with the blackout penalty."""
+    env.reset()
+    env.disturbance_mw = -5000.0
+
+    _, reward, terminated, _, info = env.step(np.zeros(ACTION_DIM, dtype=np.float32))
+
+    assert terminated is True
+    assert reward == pytest.approx(-BLACKOUT_PENALTY)
+    assert env.done is True
+    assert info["frequency"] < 49.5
+
+
+def test_observation_includes_load_and_mismatch(env: PowerGridEnv) -> None:
+    observation, _ = env.reset()
+
+    # total load > 0 and no mismatch at reset
+    assert observation[25] > 0.0
+    assert observation[26] == pytest.approx(0.0)

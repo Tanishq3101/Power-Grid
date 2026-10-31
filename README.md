@@ -1,7 +1,7 @@
 # Multi-Agent Power Grid Control
 ### Safe Cooperative MARL for Real-Time Power Grid Stability
 
-> **Status:** 🚧 In Progress — Day 1 of 30
+> **Status:** 🚧 In Progress — Days 1–5 complete (v0.4: simulator + Gymnasium env). Next: Day 6 renewables
 
 ---
 

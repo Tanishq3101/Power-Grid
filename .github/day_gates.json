@@ -1,0 +1,44 @@
+{
+  "current_day": 5,
+  "days": {
+    "1": {
+      "title": "Setup and installation",
+      "required_tests": [
+        "tests/test_project_setup.py::test_project_structure_exists",
+        "tests/test_project_setup.py::test_core_packages_importable"
+      ]
+    },
+    "2": {
+      "title": "Pandapower IEEE 14-bus grid",
+      "required_tests": [
+        "tests/test_grid.py::test_network_loads",
+        "tests/test_grid.py::test_power_flow_converges",
+        "tests/test_grid.py::test_voltage_profile_within_reasonable_range"
+      ]
+    },
+    "3": {
+      "title": "Swing equation physics",
+      "required_tests": [
+        "tests/test_physics.py::test_load_increase_drops_frequency",
+        "tests/test_physics.py::test_rest_stays_at_nominal",
+        "tests/test_plot_frequency.py::test_plot_is_saved"
+      ]
+    },
+    "4": {
+      "title": "State space, action space and reward",
+      "required_tests": [
+        "tests/test_environment.py::test_action_space_shape",
+        "tests/test_environment.py::test_reset_observation_within_space",
+        "tests/test_environment.py::test_observation_includes_load_and_mismatch"
+      ]
+    },
+    "5": {
+      "title": "Gymnasium environment with dispatch",
+      "required_tests": [
+        "tests/test_environment.py::test_random_actions_run_100_steps",
+        "tests/test_environment.py::test_action_changes_generator_dispatch",
+        "tests/test_environment.py::test_blackout_terminates_with_penalty"
+      ]
+    }
+  }
+}

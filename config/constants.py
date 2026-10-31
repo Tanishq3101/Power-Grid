@@ -135,6 +135,29 @@ BLACKOUT_PENALTY = 100.0
 
 STABILITY_BONUS = 1.0
 
+# Penalty per line loaded above MAX_LINE_LOADING
+LINE_OVERLOAD_REWARD_WEIGHT = 1.0
+
+# Generation cost model (Day 4 placeholder, linear cost)
+GENERATION_COST_PER_MW = 20.0  # $/MWh
+
+# Scales the $/h generation cost into a reward-sized quantity
+GENERATION_COST_NORMALIZATION = 10000.0
+
+# =============================================================================
+# GENERATOR DISPATCH (Day 5)
+#
+# A normalized action a in [-1, 1] maps to:
+#     P_set = clip(P_base + a * DISPATCH_RANGE_MW, GENERATOR_MIN_MW, GENERATOR_MAX_MW)
+# where P_base is the generator's initial setpoint in the IEEE case.
+# =============================================================================
+
+DISPATCH_RANGE_MW = 20.0  # maximum adjustment around base setpoint (MW)
+
+GENERATOR_MIN_MW = 0.0
+
+GENERATOR_MAX_MW = 100.0
+
 # =============================================================================
 # DASHBOARD SETTINGS
 #
@@ -176,7 +199,9 @@ RECOVERY_RATE = 0.20
 # GYM ENVIRONMENT
 # =============================================================================
 
-OBSERVATION_DIM = 35
+# Frequency, deviation, df/dt (3) + bus voltages (14) + generator P (4)
+# + generator Q (4) + total load, load mismatch (2) + line loading (15)
+OBSERVATION_DIM = 42
 
 ACTION_DIM = 4
 

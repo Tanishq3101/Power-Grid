@@ -14,3 +14,19 @@ repos:
     hooks:
       - id: flake8
         args: ["--select=E9,F63,F7,F82"]
+
+  - repo: local
+    hooks:
+      - id: require-test-files
+        name: Require a test file for every implemented module
+        entry: python .github/scripts/check_test_files.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: require-day-gates
+        name: Require tests for every day up to current_day
+        entry: python .github/scripts/check_day_gates.py
+        language: system
+        pass_filenames: false
+        always_run: true

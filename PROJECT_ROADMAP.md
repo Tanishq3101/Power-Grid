@@ -306,3 +306,30 @@ v0.3 - Grid Physics (In Progress)
 ```
 
 We'll update that file together as we progress. It will also make your GitHub repository look much more professional.
+
+
+---
+
+## Progress (updated Day 5)
+
+Current version: **v0.4** (environment complete; dispatch, reward, termination)
+
+- [x] Day 1 Project structure, CI
+- [x] Day 2 IEEE 14-bus network
+- [x] Day 3 Swing-equation physics + frequency plot (`python -m evaluation.plot_frequency`)
+- [x] Day 4 42-value observation, action space, reward (frequency, voltage, overload, cost, blackout)
+- [x] Day 5 Gymnasium env with generator dispatch
+- [ ] Day 6 Renewables / load disturbances (hook: `PowerGridEnv.disturbance_mw`)
+
+---
+
+## Starting a New Day (CI-enforced)
+
+1. Bump `current_day` in `.github/day_gates.json` and add that day's entry with
+   at least one named test: `"tests/test_x.py::test_name"` (a test can serve
+   only one day).
+2. Write the tests alongside the code. CI stays red until they exist.
+3. When a stub module is finished (no `raise NotImplementedError` left), it
+   also needs `tests/test_<module>.py` (see `.github/test_requirements.json`).
+4. Pull requests cannot lower `current_day`, remove a day, or remove a
+   required test.

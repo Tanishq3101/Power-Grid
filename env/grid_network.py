@@ -53,6 +53,8 @@ import pandapower.networks as pn
 from pandapower.auxiliary import pandapowerNet
 
 from config.constants import (
+    GENERATOR_MAX_MW,
+    GENERATOR_MIN_MW,
     IEEE_CASE,
     MAX_POWERFLOW_ITERATIONS,
     POWERFLOW_TOLERANCE,
@@ -492,20 +494,69 @@ class GridNetwork:
     def set_generator_setpoints(
         self,
         generator_setpoints: np.ndarray,
-    ) -> None:
+    ) -> np.ndarray:
         """
         Apply generator active power setpoints.
 
-        Notes
-        -----
-        Day 4:
-            Placeholder implementation.
+        Parameters
+        ----------
+        generator_setpoints : numpy.ndarray
+            Requested active power setpoints (MW), one per generator.
+            Values are clipped to [GENERATOR_MIN_MW, GENERATOR_MAX_MW].
 
-        Day 5:
-            Actual generator dispatch will be implemented.
+        Returns
+        -------
+        numpy.ndarray
+            Change in generator output relative to the initial IEEE
+            setpoints (MW). Positive values mean extra generation.
+
+        Raises
+        ------
+        RuntimeError
+            If the network has not been loaded.
+        ValueError
+            If the number of setpoints does not match the number of
+            generators.
         """
-        logger.debug("Generator dispatch placeholder called.")
-        return
+
+        if not self.is_loaded or self.net is None or self.original_net is None:
+            raise RuntimeError("Network has not been loaded. Call load_network() first.")
+
+        setpoints = np.asarray(generator_setpoints, dtype=np.float64)
+
+        generator_count = len(self.net.gen)
+
+        if setpoints.shape != (generator_count,):
+            raise ValueError(
+                f"Expected {generator_count} generator setpoints, " f"got {setpoints.shape}."
+            )
+
+        clipped = np.clip(setpoints, GENERATOR_MIN_MW, GENERATOR_MAX_MW)
+
+        self.net.gen["p_mw"] = clipped
+
+        base = self.original_net.gen["p_mw"].to_numpy(dtype=np.float64)
+
+        logger.debug("Generator setpoints applied: %s", clipped)
+
+        return clipped - base
+
+    def get_base_generator_setpoints(self) -> np.ndarray:
+        """
+        Return the initial IEEE generator active power setpoints (MW).
+        """
+
+        if self.original_net is None:
+            raise RuntimeError("Network has not been loaded. Call load_network() first.")
+
+        return self.original_net.gen["p_mw"].to_numpy(dtype=np.float64)
+
+    def is_power_flow_converged(self) -> bool:
+        """
+        Return whether the latest AC power flow converged.
+        """
+
+        return self.power_flow_converged
 
     # =====================================================================
     # TOTAL GENERATION

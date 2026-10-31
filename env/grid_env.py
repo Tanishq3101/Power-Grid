@@ -33,14 +33,11 @@ Dynamic frequency simulation belongs to:
 
 Future Integration
 ------------------
-Day 5
-    Renewable Energy
-
 Day 6
-    Reward Engine
+    Renewable Energy and load disturbances
 
 Day 7
-    Safety Layer
+    Environment testing and debugging
 
 Day 8
     Baseline Controllers
@@ -80,7 +77,17 @@ from config.constants import (
     NOMINAL_FREQUENCY,
     MIN_FREQUENCY,
     MAX_FREQUENCY,
+    BASE_MVA,
+    BLACKOUT_PENALTY,
+    DISPATCH_RANGE_MW,
     FREQUENCY_REWARD_WEIGHT,
+    GENERATION_COST_NORMALIZATION,
+    GENERATION_COST_PER_MW,
+    GENERATION_COST_WEIGHT,
+    LINE_OVERLOAD_REWARD_WEIGHT,
+    MAX_LINE_LOADING,
+    MAX_VOLTAGE,
+    MIN_VOLTAGE,
     VOLTAGE_REWARD_WEIGHT,
     STABILITY_BONUS,
 )
@@ -108,19 +115,21 @@ class PowerGridEnv(gym.Env):
 
     Observation Space
     -----------------
-    Day 4
+    Day 4 / Day 5 (42 values)
 
-    - Frequency
-    - Frequency deviation
-    - Bus voltages
-    - Generator outputs
-    - Line loading
+    - Frequency, frequency deviation, df/dt
+    - Bus voltages (14)
+    - Generator active power (4)
+    - Generator reactive power (4)
+    - Total load, load mismatch
+    - Line loading (15)
 
     Action Space
     ------------
-    Day 4
+    Day 5
 
-    - Generator active power adjustments
+    - Normalized generator active power adjustments in [-1, 1],
+      decoded to MW setpoints around each generator's base setpoint.
 
     Metadata
     --------
@@ -169,6 +178,13 @@ class PowerGridEnv(gym.Env):
 
         self.done = False
 
+        # Power balance bookkeeping (MW). Positive = excess generation.
+        # ``disturbance_mw`` is a hook for load/renewable disturbances (Day 6).
+        self.disturbance_mw = 0.0
+        self.dispatch_imbalance_mw = 0.0
+
+        self._last_observation = np.zeros(OBSERVATION_DIM, dtype=np.float32)
+
         # ------------------------------------------------------------------
         # Gymnasium Spaces
         # ------------------------------------------------------------------
@@ -176,11 +192,15 @@ class PowerGridEnv(gym.Env):
         # Observation:
         # Frequency
         # Frequency Deviation
+        # df/dt
         # 14 Bus Voltages
-        # 4 Generator Outputs
+        # 4 Generator Active Power
+        # 4 Generator Reactive Power
+        # Total Load
+        # Load Mismatch
         # 15 Line Loading
         #
-        # Total = 35
+        # Total = 42
 
         self.observation_space = spaces.Box(
             low=-np.inf,
@@ -246,6 +266,9 @@ class PowerGridEnv(gym.Env):
 
         self.done = False
 
+        self.disturbance_mw = 0.0
+        self.dispatch_imbalance_mw = 0.0
+
         # ------------------------------------------------------------------
         # Reset Physics Engine
         # ------------------------------------------------------------------
@@ -266,10 +289,12 @@ class PowerGridEnv(gym.Env):
 
         observation = self._get_observation()
 
+        self._last_observation = observation
+
         info = {
             "step": self.current_step,
             "episode_reward": self.episode_reward,
-            "power_flow_converged": self.grid.power_flow_converged,
+            "power_flow_converged": self.grid.is_power_flow_converged(),
         }
 
         logger.info("Environment reset completed successfully.")
@@ -330,13 +355,15 @@ class PowerGridEnv(gym.Env):
         # Decode Agent Action
         # ------------------------------------------------------------------
 
-        generator_action = self._decode_action(action)
+        generator_setpoints = self._decode_action(action)
 
         # ------------------------------------------------------------------
         # Apply Generator Control
         # ------------------------------------------------------------------
 
-        self.grid.set_generator_setpoints(generator_action)
+        dispatch_delta_mw = self.grid.set_generator_setpoints(generator_setpoints)
+
+        self.dispatch_imbalance_mw = float(np.sum(dispatch_delta_mw))
 
         # ------------------------------------------------------------------
         # Run AC Power Flow
@@ -348,27 +375,37 @@ class PowerGridEnv(gym.Env):
         # Advance Grid Physics
         # ------------------------------------------------------------------
 
+        # The swing equation works on a per-unit imbalance (system base).
+        physics_imbalance_mw = self.disturbance_mw + self.dispatch_imbalance_mw
+
+        self.physics.set_power_imbalance(physics_imbalance_mw / BASE_MVA)
+
         physics_state = self.physics.step()
-
-        # ------------------------------------------------------------------
-        # Build Observation
-        # ------------------------------------------------------------------
-
-        observation = self._get_observation()
-
-        # ------------------------------------------------------------------
-        # Compute Reward
-        # ------------------------------------------------------------------
-
-        reward = self._compute_reward()
-
-        self.episode_reward += reward
 
         # ------------------------------------------------------------------
         # Check Episode Status
         # ------------------------------------------------------------------
 
         terminated = self._check_termination()
+
+        # ------------------------------------------------------------------
+        # Build Observation and Reward
+        # ------------------------------------------------------------------
+
+        if self.grid.is_power_flow_converged():
+
+            observation = self._get_observation()
+
+            self._last_observation = observation
+
+        else:
+
+            # No valid electrical state exists; reuse the last valid one.
+            observation = self._last_observation
+
+        reward = self._compute_reward(blackout=terminated)
+
+        self.episode_reward += reward
 
         self.current_step += 1
 
@@ -383,7 +420,8 @@ class PowerGridEnv(gym.Env):
         info = {
             "step": self.current_step,
             "episode_reward": self.episode_reward,
-            "power_flow_converged": self.grid.power_flow_converged,
+            "power_flow_converged": self.grid.is_power_flow_converged(),
+            "power_imbalance_mw": physics_imbalance_mw,
             "frequency": physics_state["frequency"],
             "frequency_deviation": physics_state["frequency_deviation"],
             "stable": physics_state["stable"],
@@ -410,24 +448,17 @@ class PowerGridEnv(gym.Env):
         """
         Construct the observation vector for the RL agent.
 
-        Observation Layout
-        ------------------
-        Index Range
-
-        0
-            Grid Frequency
-
-        1
-            Frequency Deviation
-
-        2 - 15
-            Bus Voltages (14)
-
-        16 - 19
-            Generator Active Power (4)
-
-        20 - 34
-            Line Loading (15)
+        Observation Layout (42 values)
+        ------------------------------
+        0       Grid frequency (Hz)
+        1       Frequency deviation (Hz)
+        2       Rate of change of frequency df/dt (Hz/s)
+        3 - 16  Bus voltages (14, pu)
+        17 - 20 Generator active power (4, MW)
+        21 - 24 Generator reactive power (4, MVAr)
+        25      Total load (MW)
+        26      Load mismatch: disturbance + dispatch imbalance (MW)
+        27 - 41 Line loading (15, %)
 
         Returns
         -------
@@ -435,70 +466,66 @@ class PowerGridEnv(gym.Env):
             Observation vector.
         """
 
-        # ------------------------------------------------------------------
-        # Frequency State
-        # ------------------------------------------------------------------
-
         physics_state = self.physics.get_state()
 
         frequency = physics_state["frequency"]
 
         frequency_deviation = physics_state["frequency_deviation"]
 
-        # ------------------------------------------------------------------
-        # Electrical State
-        # ------------------------------------------------------------------
+        frequency_rate = self.physics.compute_frequency_derivative()
 
         bus_voltages = self.grid.get_bus_voltages()
 
-        generator_output, _ = self.grid.get_generator_outputs()
+        generator_p, generator_q = self.grid.get_generator_outputs()
+
+        total_load = self.grid.get_total_load()
+
+        load_mismatch = self.disturbance_mw + self.dispatch_imbalance_mw
 
         line_loading = self.grid.get_line_loadings()
-
-        # ------------------------------------------------------------------
-        # Build Observation
-        # ------------------------------------------------------------------
 
         observation = np.concatenate(
             (
                 np.array(
-                    [
-                        frequency,
-                        frequency_deviation,
-                    ],
+                    [frequency, frequency_deviation, frequency_rate],
                     dtype=np.float32,
                 ),
                 bus_voltages.astype(np.float32),
-                generator_output.astype(np.float32),
+                generator_p.astype(np.float32),
+                generator_q.astype(np.float32),
+                np.array([total_load, load_mismatch], dtype=np.float32),
                 line_loading.astype(np.float32),
             )
         )
 
         return observation
 
-        ###########################################################################
+    ###########################################################################
 
     # Reward Function
     ###########################################################################
 
-    def _compute_reward(self) -> float:
+    def _compute_reward(self, blackout: bool = False) -> float:
         """
         Compute the reward for the current environment state.
 
-        Day 4 implements a simple placeholder reward based on:
+        Terms
+        -----
+        - Frequency deviation penalty
+        - Voltage violation penalty
+        - Line overload penalty
+        - Generation cost penalty
+        - Blackout penalty (episode terminated by a failure)
+        - Stability bonus
 
-        - Frequency deviation
-        - Voltage violations
-        - Line loading violations
+        Future versions will add renewable utilization, safety penalties
+        and multi-objective reward shaping.
 
-        Future versions (Day 6+) will include:
-
-        - Generation cost
-        - Renewable utilization
-        - Safety penalties
-        - Battery usage
-        - Load shedding
-        - Multi-objective reward shaping
+        Parameters
+        ----------
+        blackout : bool
+            True if the episode terminated because of a failure
+            (frequency violation or power flow divergence).
 
         Returns
         -------
@@ -506,55 +533,48 @@ class PowerGridEnv(gym.Env):
             Scalar reward.
         """
 
-        # ------------------------------------------------------------------
-        # Physics State
-        # ------------------------------------------------------------------
+        if blackout:
+
+            return -float(BLACKOUT_PENALTY)
 
         physics_state = self.physics.get_state()
 
         frequency_deviation = abs(physics_state["frequency_deviation"])
 
-        # ------------------------------------------------------------------
-        # Grid State
-        # ------------------------------------------------------------------
-
         voltages = self.grid.get_bus_voltages()
 
         line_loading = self.grid.get_line_loadings()
 
-        # ------------------------------------------------------------------
-        # Frequency Penalty
-        # ------------------------------------------------------------------
-
+        # Frequency penalty
         reward = -FREQUENCY_REWARD_WEIGHT * frequency_deviation
 
-        # ------------------------------------------------------------------
-        # Voltage Violations
-        # ------------------------------------------------------------------
-
-        voltage_violations = np.sum((voltages < 0.95) | (voltages > 1.05))
+        # Voltage violations
+        voltage_violations = np.sum((voltages < MIN_VOLTAGE) | (voltages > MAX_VOLTAGE))
 
         reward -= VOLTAGE_REWARD_WEIGHT * float(voltage_violations)
 
-        # ------------------------------------------------------------------
-        # Line Overloads
-        # ------------------------------------------------------------------
+        # Line overloads
+        overloads = np.sum(line_loading > MAX_LINE_LOADING)
 
-        overloads = np.sum(line_loading > 100.0)
+        reward -= LINE_OVERLOAD_REWARD_WEIGHT * float(overloads)
 
-        reward -= float(overloads)
+        # Generation cost (linear cost on total generation incl. slack)
+        generation_cost = (
+            GENERATION_COST_PER_MW
+            * self.grid.get_total_generation()
+            / GENERATION_COST_NORMALIZATION
+        )
 
-        # ------------------------------------------------------------------
-        # Stability Bonus
-        # ------------------------------------------------------------------
+        reward -= GENERATION_COST_WEIGHT * generation_cost
 
+        # Stability bonus
         if physics_state["stable"]:
 
             reward += STABILITY_BONUS
 
         return float(reward)
 
-        ###########################################################################
+    ###########################################################################
 
     # Action Decoder
     ###########################################################################
@@ -567,9 +587,11 @@ class PowerGridEnv(gym.Env):
         Decode the normalized action vector into generator
         active power setpoint adjustments.
 
-        Day 4
+        Day 5
         -----
         IEEE 14-Bus system contains four controllable generators.
+        Each normalized action a in [-1, 1] is scaled to an MW adjustment
+        around the generator's base setpoint (DISPATCH_RANGE_MW).
 
         Future versions will extend this method to support:
 
@@ -587,7 +609,7 @@ class PowerGridEnv(gym.Env):
         Returns
         -------
         np.ndarray
-            Generator active power setpoints (MW).
+            Absolute generator active power setpoints (MW).
         """
 
         # ------------------------------------------------------------------
@@ -618,19 +640,16 @@ class PowerGridEnv(gym.Env):
         )
 
         # ------------------------------------------------------------------
-        # Convert Normalized Action to Generator Setpoints
+        # Convert Normalized Action to Generator Setpoints (MW)
         # ------------------------------------------------------------------
 
-        #
-        # Day 4:
-        # The normalized values are passed directly.
-        #
-        # Future versions will convert these normalized
-        # actions into actual MW dispatch values using
-        # generator operating limits.
-        #
+        # a in [-1, 1]  ->  P_set = P_base + a * DISPATCH_RANGE_MW
+        # (limits to [GENERATOR_MIN_MW, GENERATOR_MAX_MW] are applied
+        # by GridNetwork.set_generator_setpoints()).
 
-        generator_setpoints = action.copy()
+        base_setpoints = self.grid.get_base_generator_setpoints()
+
+        generator_setpoints = base_setpoints + action.astype(np.float64) * DISPATCH_RANGE_MW
 
         return generator_setpoints
 
@@ -687,7 +706,7 @@ class PowerGridEnv(gym.Env):
         # Power Flow Convergence
         # ------------------------------------------------------------------
 
-        if not self.grid.power_flow_converged:
+        if not self.grid.is_power_flow_converged():
 
             logger.warning("Episode terminated because power flow " "did not converge.")
 

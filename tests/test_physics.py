@@ -151,3 +151,31 @@ def test_recovery_reduces_power_imbalance(physics: GridPhysics) -> None:
 def test_validate_returns_true_for_healthy_engine(physics: GridPhysics) -> None:
     """A properly constructed engine should always validate as True."""
     assert physics.validate() is True
+
+
+###############################################################################
+# Day 3: Steady State and Recovery
+###############################################################################
+
+
+def test_rest_stays_at_nominal(physics: GridPhysics) -> None:
+    """Stable at 50 Hz at rest."""
+    for _ in range(100):
+        state = physics.step()
+
+    assert state["frequency"] == pytest.approx(NOMINAL_FREQUENCY)
+
+
+def test_frequency_recovers_after_load_step(physics: GridPhysics) -> None:
+    """With recovery, frequency dips below nominal then returns toward it."""
+    physics.apply_load_change(0.3)
+
+    lowest = NOMINAL_FREQUENCY
+
+    for _ in range(80):
+        physics.step()
+        physics.restore_nominal_operation()
+        lowest = min(lowest, physics.get_frequency())
+
+    assert lowest < NOMINAL_FREQUENCY
+    assert abs(physics.get_frequency_deviation()) < abs(lowest - NOMINAL_FREQUENCY)
