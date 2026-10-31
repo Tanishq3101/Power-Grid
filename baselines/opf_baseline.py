@@ -16,8 +16,8 @@ Weakness: runs every N steps (not every second), ignores dynamics.
 TODO Day 13: Implement fully
 """
 
-import pandapower as pp
 import numpy as np
+import pandapower as pp
 
 
 class OPFBaseline:
