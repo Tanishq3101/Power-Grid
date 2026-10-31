@@ -45,9 +45,9 @@ https://labs.ece.uw.edu/pstca/pf14/ieee14cdf.txt
 from __future__ import annotations
 
 import copy
-import numpy as np
 from typing import Dict, Optional
 
+import numpy as np
 import pandapower as pp
 import pandapower.networks as pn
 from pandapower.auxiliary import pandapowerNet
@@ -59,7 +59,6 @@ from config.constants import (
     MAX_POWERFLOW_ITERATIONS,
     POWERFLOW_TOLERANCE,
 )
-
 from utils.logger import get_logger
 
 # -----------------------------------------------------------------------------
