@@ -18,7 +18,7 @@ PASS = "✅"
 FAIL = "❌"
 WARN = "⚠️ "
 
-results = []
+results: list[tuple[str, bool]] = []
 
 
 def check(label, fn):
@@ -297,8 +297,8 @@ check("Logger initialization", test_logger)
 # Summary
 # ─────────────────────────────────────────────────────────────
 
-passed = sum(1 for r in results if r[0] == PASS)
-failed = sum(1 for r in results if r[0] == FAIL)
+passed = len([r for r in results if r[0] == PASS])
+failed = len([r for r in results if r[0] == FAIL])
 total = len(results)
 
 print(f"\n{'─'*60}")
