@@ -22,7 +22,15 @@ warn_unused_ignores = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v"
+# --strict-markers / --strict-config: a typo in a marker or in this table is an
+# error instead of being silently ignored.
+addopts = "-v --strict-markers --strict-config"
+# An xfail test that unexpectedly passes fails the run instead of hiding.
+xfail_strict = true
+filterwarnings = [
+    # pandapower 3.x emits this for the stock IEEE case; harmless noise (~300 lines).
+    "ignore:tap_dependency_table is missing in net:DeprecationWarning",
+]
 
 [tool.coverage.run]
 # What actually counts toward coverage — project source, not tests/config/tools.
@@ -33,12 +41,19 @@ omit = [
 ]
 
 [tool.coverage.report]
+# Single source of truth for the coverage floor: `pytest --cov` (locally and in
+# ci.yml) fails below this. The Day 6-22 stubs count as uncovered statements, so
+# the total understates the implemented code (~95%); raise this as days land.
+fail_under = 70
+show_missing = true
+skip_empty = true
 # Days 6-22 files are still NotImplementedError stubs (by design, per the
 # blueprint) — don't let unreached lines in those inflate/deflate the number
-# misleadingly. Real threshold enforcement happens in ci.yml once those fill in.
+# misleadingly.
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
     "def __repr__",
     "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
 ]
